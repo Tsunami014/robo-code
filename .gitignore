@@ -1,3 +1,10 @@
+# Do not commit python cache files!
 __pycache__/
 *.pyc
 .venv/
+# DO NOT COMMIT PERSONAL CODE FOR THE ASSESMENT TASK (or whoever's code they used too)
+main.py
+test.py
+!examples/main.py
+!examples/test.py
+pseudocode/*
