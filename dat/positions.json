@@ -1,0 +1,41 @@
+{
+    "info": "All measurements are in mm, YET TO BE CONFIRMED, but should be right, coordinates in lists [x, y], and rects in lists of lists [[startx, starty], [endx, endy]], and Objects are in [[corner1x, corner1y], ..., [cornerNx, cornerNy]] (where the corners are ordered to be connected to each other, and the last point joins back to the first point)",
+
+    "Coordinates": {},
+    "Rects": {
+        "start_box": [
+            [0, 0],
+            [187, 147]
+        ],
+        "Board_size": [
+            [0, 0],
+            [839, 971]
+        ]
+    },
+    "Objects": {
+        "Yellow_box": [
+            [164, 720],
+            [152, 765],
+            [212, 785],
+            [220, 742]
+        ],
+        "Blue_box": [
+            [518, 328],
+            [548, 282],
+            [575, 302],
+            [553, 346]
+        ],
+        "Green_box": [
+            [276, 551],
+            [304, 521],
+            [345, 565],
+            [315, 594]
+        ],
+        "Red_box": [
+            [690, 444],
+            [735, 452],
+            [716, 507],
+            [678, 498]
+        ]
+    }
+}
