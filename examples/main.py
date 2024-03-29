@@ -8,13 +8,14 @@ from pybricks.tools import wait, StopWatch, DataLog
 from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
 
-class Sensors:
+class Sensors: # TODO: Simulate these
     Ultrasonic = UltrasonicSensor(Port.S4)
 
 class Robot:
     def __init__(self):
         self.ev3 = EV3Brick()
-        self.driving = DriveBase(Motor(Port.B), Motor(Port.C), wheel_diameter=55.5, axle_track=104)
+        self.drivingconfig = (Motor(Port.B), Motor(Port.C), 55.5, 104)
+        self.driving = DriveBase(*self.drivingconfig)
     
     def test_follow(self):
         while True:
