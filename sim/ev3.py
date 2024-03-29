@@ -2,7 +2,6 @@ from pybricks.parameters import Button, Color
 from pybricks.media.ev3dev import Font, Image, ImageFile
 from typing import Union
 
-from pygame import K_w
 from sim.converts import ConvertColor, ConvertFont, ConvertImage, ConvertImageFile
 
 from pygame.key import get_pressed
@@ -44,7 +43,7 @@ class Buttons:
         List of pressed buttons.
         """
         btns = []
-        keys = pygame.key.get_pressed()
+        keys = get_pressed()
         if keys[K_a] and keys[K_w]:
             btns.append(Button.LEFT_UP)
         elif keys[K_a] and keys[K_s]:
@@ -113,6 +112,7 @@ class Screen:
         self.height = 128  # type: int
         self.sur = Surface((self.width, self.height))
         self.font = ConvertFont(Font.DEFAULT)
+        self.waiting = []
         self.clear()
 
     def clear(self):
@@ -173,7 +173,7 @@ class Screen:
         """
         self.clear()
         if isinstance(source, str):
-            self.sur.blit(ConvertImageFile(source), ((self.width-160)//2, (self.height-120)//2))
+            self.waiting.append((ConvertImageFile(source), ((self.width-160)//2, (self.height-120)//2), None))
         else:
             pass # TODO: When it's an Image
 
@@ -188,10 +188,7 @@ class Screen:
             transparent (Color): The color of image to treat as transparent or None for no transparency.
         """
         if isinstance(source, str):
-            s = ConvertImageFile(source)
-            if transparent is not None:
-                s.set_colorkey(ConvertColor(transparent))
-            self.sur.blit(s, (x, y))
+            self.waiting.append(ConvertImageFile(source), (x, y), ConvertColor(transparent))
         else:
             pass # TODO: When it's an Image
 
@@ -262,3 +259,12 @@ class Screen:
             OSError: There was a problem saving the file.
         """
         pygame.image.save(self.sur, filename)
+    
+    def get_sur(self):
+        s = self.sur.copy()
+        for sur, pos, colourkey in self.waiting:
+            newsur = sur.get_sur()
+            if colourkey is not None:
+                newsur.set_colorkey(ConvertColor(colourkey))
+            s.blit(newsur, pos)
+        return s

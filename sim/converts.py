@@ -1,12 +1,11 @@
 from pygame.font import SysFont as PygameFont
 from pygame.surface import Surface
-from pygame.image import load
-import pygame.draw
 
 from pybricks.parameters import Color
 from pybricks.media.ev3dev import Font, Image, ImageFile, SoundFile
 
-import requests, io, simpleaudio
+import requests, simpleaudio
+from sim.caching import URLImage, IMAGECACHE
 
 def ConvertColor(color: Color) -> tuple[int, int, int]:
     h = color.h
@@ -31,47 +30,17 @@ def ConvertColor(color: Color) -> tuple[int, int, int]:
 def ConvertFont(font: Font) -> PygameFont:
     return PygameFont(font.family, font.height) # TODO: bold=font.style=='Bold'
 
-# TODO: Return an image to say 'LOADING IMAGE' so it doesn't block the whole stream
-IMAGECACHE = {}
-
 def ConvertImageFile(imagefile: str | ImageFile) -> Surface:
+    global IMAGECACHE
     alls = [getattr(ImageFile,i) for i in dir(ImageFile) if i.upper() == i and i != '_BASE_PATH']
     if imagefile not in alls: raise ValueError('Invalid image')
-    if imagefile in IMAGECACHE: return IMAGECACHE[imagefile]
-    try:
-        resp = requests.get('https://pybricks.com/ev3-micropython/_images'+imagefile[imagefile.rfind('/'):])
-    except Exception as e:
-        resp = e
-        resp.status_code = -1
-        resp.reason = str(e)
-    if resp.status_code != 200:
-        name = [i for i in dir(ImageFile) if i.upper() == i and i != '_BASE_PATH'][alls.index(imagefile)]
-        sze = (160, 120)
-        sur = Surface(sze)
-        sur.fill((255, 255, 255))
-        h = 10
-        pygame.draw.rect(sur, (255, 35, 12), sur.get_rect(), 3, 2)
-        subs = PygameFont(None, 20).render('Image failed to load!', 1, (255, 35, 12))
-        sur.blit(subs, ((sze[0]-subs.get_width())/2, h))
-        h += subs.get_height()+10
-        subs = PygameFont('Comic Sans MS', 40).render(name, 1, (12, 112, 255))
-        sur.blit(subs, ((sze[0]-subs.get_width())/2, h))
-        h += subs.get_height()+10
-        subs = PygameFont(None, 12).render('Reason: '+resp.reason, 1, (0, 0, 0))
-        sur.blit(subs, ((sze[0]-subs.get_width())/2, h))
-        IMAGECACHE[imagefile] = sur
-        return sur
-    
-    data = io.BytesIO()
-    for block in resp.iter_content(1024):
-        if not block:
-            break
-        data.write(block)
-
-    data.seek(0)
-    s = load(data)
-    IMAGECACHE[imagefile] = s
-    return s
+    name = [i for i in dir(ImageFile) if i.upper() == i and i != '_BASE_PATH'][alls.index(imagefile)]
+    if name in IMAGECACHE: return IMAGECACHE[name]
+    newim = URLImage(
+        'https://pybricks.com/ev3-micropython/_images'+imagefile[imagefile.rfind('/'):]
+    )
+    IMAGECACHE[name] = newim
+    return newim
 
 def ConvertImage(image: Image) -> Surface:
     pass # TODO: This

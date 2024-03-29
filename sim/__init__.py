@@ -75,12 +75,10 @@ class EV3BrickSim:
     
     def generate_face(self):
         whole = pygame.Surface((200, 400))
+        space = (200 - 178) / 2
         whole.fill((255, 255, 255))
-        screen = pygame.Surface((160, 120))
-        screen.fill((255, 255, 255))
-        screen.blit(self.screen.sur, (0, 0))
-        pygame.draw.rect(whole, (0, 0, 0), (12, 0, 176, 136), 8, 1)
-        whole.blit(screen, (20, 8))
+        whole.blit(self.screen.get_sur(), (space, 0))
+        pygame.draw.rect(whole, (0, 0, 0), (space, 0, 178, 128), 8, 1)
         f = pygame.font.SysFont(None, 20)
         whole.blit(f.render(str(self.buttons.pressed()), 1, (0, 0, 0)), (20, 160))
         return whole

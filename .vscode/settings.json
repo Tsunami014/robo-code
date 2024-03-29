@@ -3,5 +3,6 @@
 	"files.eol": "\n",
 	"debug.openDebug": "neverOpen",
 	"python.linting.enabled": true,
-    "python.languageServer": "Pylance"
+    "python.languageServer": "Pylance",
+    "python.REPL.enableREPLSmartSend": false
 }
