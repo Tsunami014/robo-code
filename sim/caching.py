@@ -32,7 +32,7 @@ class URLImage(Surface):
             subs = PygameFont(None, 20).render('Image failed to load!', 1, (255, 35, 12))
             sur.blit(subs, ((sze[0]-subs.get_width())/2, h))
             h += subs.get_height()+10
-            subs = PygameFont('Comic Sans MS', 40).render(self.name, 1, (12, 112, 255))
+            subs = PygameFont('Comic Sans MS', 10).render(self.url, 1, (12, 112, 255))
             sur.blit(subs, ((sze[0]-subs.get_width())/2, h))
             h += subs.get_height()+10
             subs = PygameFont(None, 12).render('Reason: '+resp.reason, 1, (0, 0, 0))
