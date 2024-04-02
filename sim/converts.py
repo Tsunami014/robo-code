@@ -4,10 +4,15 @@ from pygame.surface import Surface
 from pybricks.parameters import Color
 from pybricks.media.ev3dev import Font, Image, ImageFile, SoundFile
 
-import requests, simpleaudio
 from sim.caching import URLImage, IMAGECACHE
+import requests
+try:
+    import simpleaudio
+    SIMPLEAUDIOACTIVE = True
+except ImportError:
+    SIMPLEAUDIOACTIVE = False
 
-def ConvertColor(color: Color) -> tuple[int, int, int]:
+def ConvertColor(color: Color) -> tuple[int, int, int]: # Thanks https://stackoverflow.com/questions/24852345/hsv-to-rgb-color-conversion
     h = color.h
     s = color.s
     v = color.v
@@ -49,14 +54,20 @@ def ConvertImage(image: Image) -> Surface:
 SOUNDCACHE = {}
 
 def ConvertSoundFile(soundfile: str | SoundFile):
-    if soundfile in SOUNDCACHE: return SOUNDCACHE[soundfile]
-    audio_url = 'https://pybricks.com/ev3-micropython/_downloads'+soundfile[soundfile.rfind('/'):]
-    try:
-        resp = requests.get(audio_url)
-    except Exception as e:
-        resp = e
-        resp.status_code = -1
-        resp.reason = str(e)
+    if SIMPLEAUDIOACTIVE:
+        if soundfile in SOUNDCACHE: return SOUNDCACHE[soundfile]
+        audio_url = 'https://pybricks.com/ev3-micropython/_downloads'+soundfile[soundfile.rfind('/'):]
+        try:
+            resp = requests.get(audio_url)
+        except Exception as e:
+            resp = e
+            resp.status_code = -1
+            resp.reason = str(e)
+    else:
+        s = 'Simpleaudio not installed!'
+        resp = ImportError(s)
+        resp.status_code = -2
+        resp.reason = s
     
     if resp.status_code != 200:
         # DO SOMTHING HERE
