@@ -1,11 +1,12 @@
-from pybricks.parameters import Button, Color
+from pybricks.parameters import Color
 from pybricks.media.ev3dev import Font, Image, ImageFile
 from typing import Union
+from enum import Enum
 
 from sim.converts import ConvertColor, ConvertFont, ConvertImage, ConvertImageFile
 
 from pygame.key import get_pressed
-from pygame.locals import K_LEFT, K_RIGHT, K_UP, K_DOWN, K_SPACE, K_w, K_s, K_a, K_d
+import pygame.locals as pgls
 
 class Battery:
     """
@@ -30,6 +31,21 @@ class Battery:
         """
         return 0
 
+class Button(Enum):
+    """
+    Buttons on a brick or remote.
+    """
+    LEFT_DOWN = 0
+    DOWN = 1
+    RIGHT_DOWN = 2
+    LEFT = 3
+    CENTER = 4
+    RIGHT = 5
+    LEFT_UP = 6
+    UP = 7
+    BEACON = 8 # TODO in Buttons class
+    RIGHT_UP = 9
+
 class Buttons:
     """
     A class to represent the buttons member of the EV3Brick class for the sim.
@@ -44,30 +60,34 @@ class Buttons:
         """
         btns = []
         keys = get_pressed()
-        if keys[K_a] and keys[K_w]:
+
+        if keys[pgls.K_SPACE] or keys[pgls.K_RETURN]:
+            btns.append(Button.CENTER)
+        
+        if keys[pgls.K_a] and keys[pgls.K_w]:
             btns.append(Button.LEFT_UP)
-        elif keys[K_a] and keys[K_s]:
+        elif keys[pgls.K_a] and keys[pgls.K_s]:
             btns.append(Button.LEFT_DOWN)
-        elif keys[K_d] and keys[K_s]:
+        elif keys[pgls.K_d] and keys[pgls.K_s]:
             btns.append(Button.RIGHT_DOWN)
-        elif keys[K_d] and keys[K_w]:
+        elif keys[pgls.K_d] and keys[pgls.K_w]:
             btns.append(Button.RIGHT_UP)
         else:
-            if keys[K_w]:
+            if keys[pgls.K_w]:
                 btns.append(Button.UP)
-            if keys[K_s]:
+            if keys[pgls.K_s]:
                 btns.append(Button.DOWN)
-            if keys[K_a]:
+            if keys[pgls.K_a]:
                 btns.append(Button.LEFT)
-            if keys[K_d]:
+            if keys[pgls.K_d]:
                 btns.append(Button.RIGHT)
-        if keys[K_UP] and Button.UP not in btns:
+        if keys[pgls.K_UP] and Button.UP not in btns:
             btns.append(Button.UP)
-        if keys[K_DOWN] and Button.DOWN not in btns:
+        if keys[pgls.K_DOWN] and Button.DOWN not in btns:
             btns.append(Button.DOWN)
-        if keys[K_LEFT] and Button.LEFT not in btns:
+        if keys[pgls.K_LEFT] and Button.LEFT not in btns:
             btns.append(Button.LEFT)
-        if keys[K_RIGHT] and Button.RIGHT not in btns:
+        if keys[pgls.K_RIGHT] and Button.RIGHT not in btns:
             btns.append(Button.RIGHT)
         return btns
 
