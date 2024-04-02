@@ -1,6 +1,6 @@
-import pyttsx3, pygame
 from typing import Union, Iterable
 import numpy as np
+import pyttsx3, pygame, math
 
 from pybricks.media.ev3dev import SoundFile
 from sim.converts import ConvertSoundFile
@@ -8,6 +8,10 @@ from sim.converts import ConvertSoundFile
 MODEL_NAMES = {'af': 'afrikaans', 'an': 'aragonese', 'bg': 'bulgarian', 'bs': 'bosnian', 'ca': 'catalan', 'cs': 'czech', 'cy': 'welsh', 'da': 'danish', 'de': 'german', 'el': 'greek', 'en': 'default', 'en-gb': 'english', 'en-sc': 'en-scottish', 'en-uk-north': 'english-north', 'en-uk-rp': 'english_rp', 'en-uk-wmids': 'english_wmids', 'en-us': 'english-us', 'en-wi': 'en-westindies', 'eo': 'esperanto', 'es': 'spanish', 'es-la': 'spanish-latin-am', 'et': 'estonian', 'fa': 'Persian+English-UK', 'fa-pin': 'persian-pinglish', 'fi': 'finnish', 'fr-be': 'french-Belgium', 'fr-fr': 'french', 'ga': 'irish-gaeilge', 'grc': 'greek-ancient', 'hi': 'hindi', 'hr': 'croatian', 'hu': 'hungarian', 'hy': 'armenian', 'hy-west': 'armenian-west', 'id': 'indonesian', 'is': 'icelandic', 'it': 'italian', 'jbo': 'lojban', 'ka': 'georgian', 'kn': 'kannada', 'ku': 'kurdish', 'la': 'latin', 'lfn': 'lingua_franca_nova', 'lt': 'Lithuanian', 'lv': 'latvian', 'mk': 'macedonian', 'ml': 'malayalam', 'ms': 'malay', 'ne': 'nepali', 'nl': 'dutch', 'no': 'norwegian', 'pa': 'punjabi', 'pl': 'polish', 'pt-br': 'brazil', 'pt-pt': 'portugal', 'ro': 'romanian', 'ru': 'russian', 'sk': 'slovak', 'sq': 'albanian', 'sr': 'serbian', 'sv': 'swedish', 'sw': 'swahili-test', 'ta': 'tamil', 'tr': 'turkish', 'vi': 'vietnam', 'vi-hue': 'vietnam_hue', 'vi-sgn': 'vietnam_sgn', 'zh': 'Mandarin', 'zh-yue': 'cantonese'}
 
 UNUSED_MODELS = ['bengali', 'basque-test', 'Persian+English-US', 'gujarati-test', 'interlingua', 'telugu-test']
+
+bits = 16
+#the number of channels specified here is NOT 
+#the channels talked about here http://www.pygame.org/docs/ref/mixer.html#pygame.mixer.get_num_channels
 
 class Speaker:
     """
@@ -18,7 +22,7 @@ class Speaker:
         self.engine = pyttsx3.init()
         self.beepvolume = 1
 
-    def beep(self, frequency: int = 500, duration: int = 100):
+    def beep(self, frequency: int = 500, duration: int = 100): # Thanks https://stackoverflow.com/questions/7816294/simple-pygame-audio-at-a-frequency!
         """
         Play a beep/tone.
 
@@ -26,31 +30,41 @@ class Speaker:
             frequency (int): Frequency of the beep in Hertz. Frequencies below 100 are treated as 100.
             duration (int): Duration of the beep in milliseconds. If the duration is less than 0, then the method returns immediately, and the frequency play continues to play indefinitely.
         """
-        duration = duration / 1000 # Convert to milliseconds
-        pygame.mixer.init(frequency=44100, channels=2)  # Initialize Pygame mixer with stereo channels
-        sample_rate = 44100  # standard audio CD sample rate
-        num_samples = int(duration * sample_rate)
-        fadeout_duration = 0.1  # duration for fadeout effect
-
-        # Generate the waveform
-        t = np.linspace(0, duration, num_samples, endpoint=False)
-        waveform = np.sin(2 * np.pi * frequency * t)
-
-        # Apply fadeout effect
-        fadeout_samples = int(fadeout_duration * sample_rate)
-        fadeout_curve = np.linspace(1, 0, fadeout_samples)
-        waveform[-fadeout_samples:] *= fadeout_curve
-
-        # Create a stereo waveform by duplicating the mono waveform for both channels
-        stereo_waveform = np.column_stack((waveform, waveform))
-        stereo_waveform *= self.beepvolume
-        stereo_waveform *= 0.5 * (2**15 - 1)
-        stereo_waveform = stereo_waveform.astype(np.int16)
-        sound = pygame.sndarray.make_sound(stereo_waveform)
+        # Set sone vars
+        fade_in = 0.05
+        fade_out = 0.2
+        volume = 1
+        frequency_l = frequency - 50
+        frequency_r = frequency + 50
         
-        sound.play()
-        pygame.time.wait(int(duration * 1000))
-        pygame.mixer.quit()
+        #this sounds totally different coming out of a laptop versus coming out of headphones
+
+        sample_rate = 44100
+
+        n_samples = int(round(duration*sample_rate))
+
+        #setup our numpy array to handle 16 bit ints, which is what we set our mixer to expect with "bits" up above
+        buf = np.zeros((n_samples, 2), dtype = np.int16)
+        max_sample = 2**(bits - 1) - 1
+
+        for s in range(n_samples):
+            t = float(s)/sample_rate    # time in seconds
+            # Apply volume, fade in and fade out
+            loudness = 1
+            if fade_in > 0 and t < fade_in:
+                loudness = loudness * (t / fade_in)
+            if fade_out > 0 and t > duration-fade_out:
+                loudness = loudness * ((duration-t) / fade_out)
+
+            #grab the x-coordinate of the sine wave at a given time, while constraining the sample to what our mixer is set to with "bits"
+            buf[s][0] = int(round(max_sample*math.sin(2*math.pi*frequency_l*t)) * loudness)        # left
+            buf[s][1] = int(round(max_sample*0.5*math.sin(2*math.pi*frequency_r*t)) * loudness)    # right
+
+        sound = pygame.sndarray.make_sound(buf)
+        sound.set_volume(volume)
+        chan = sound.play()
+        while chan.get_busy():
+            pass
 
     def play_notes(self, notes: Iterable[str], tempo: int = 120):
         """
