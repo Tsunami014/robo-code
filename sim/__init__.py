@@ -5,11 +5,17 @@ pygame.init()
 
 from sim.ev3 import Battery, Buttons, Light, Screen
 from sim.speaker import Speaker
-from sim.motors import Motor, Control
+from sim.motors import Motor, Control, Number
+import sim.time as time
 
 from dat import get_positions
 
+from pybricks.parameters import Stop
+from typing import Optional, overload, Awaitable
+MaybeAwaitable = None | Awaitable[None]
+
 from threading import Thread
+import math
 
 def scale_sur(sur, size):
     scaled = pygame.Surface(size)
@@ -21,6 +27,26 @@ def scale_sur(sur, size):
     else:
         scaled.blit(newsur, (0, (size[1] - newsur.get_height()) / 2))
     return scaled
+
+def rotate(origin, point, angle): # Thanks, https://stackoverflow.com/questions/34372480/rotate-point-about-another-point-in-degrees-python!
+    """
+    Rotate a point clockwise by a given angle around a given origin.
+
+    The angle should be given in degrees.
+    """
+    angle = math.radians(-angle) # Below is assuming counter-clockwise rotation :(
+    ox, oy = origin
+    px, py = point
+    
+    cos = math.cos(angle)
+    sin = math.sin(angle)
+    
+    ydiff = (py - oy)
+    xdiff = (px - ox)
+
+    qx = ox + cos * xdiff - sin * ydiff
+    qy = oy + sin * xdiff + cos * ydiff
+    return qx, qy
 
 class EV3BrickSim:
     """
@@ -48,6 +74,9 @@ class EV3BrickSim:
         t.start()
         field = pygame.Surface(get_positions()['Rects']['Board_size'][1])
         clock = pygame.time.Clock()
+        time.reset()
+        fr = 60
+        time.set_fr(fr)
         while r:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -56,10 +85,20 @@ class EV3BrickSim:
                     if event.key == pygame.K_ESCAPE:
                         r = False
             self.win.fill((255, 255, 255))
+            drivebase()
             
             # Field
             field.fill((255, 255, 255))
-            pygame.draw.rect(field, (0, 0, 0), (*drivebase.position, 100, 100))
+            
+            # Robot
+            sze = (100, 100)
+            robot = pygame.Surface(sze)
+            robot.fill((255, 255, 255))
+            pygame.draw.rect(robot, 0, (0, 0, *sze), 8)
+            roboPic = pygame.font.Font(None, 100).render('=>', 1, 0)
+            robot.blit(roboPic, ((sze[0] - roboPic.get_width())/2, (sze[1] - roboPic.get_height())/2))
+            roted = pygame.transform.rotate(robot, drivebase.rotation - 90) # Because rendered text is in wrong orientation
+            field.blit(roted, drivebase.position)
             
             # Put it all on the screen
             fieldpos = (10, 10)
@@ -71,7 +110,8 @@ class EV3BrickSim:
             
             # Update screen
             pygame.display.update()
-            clock.tick(60)
+            clock.tick(fr)
+            time.tick()
     
     def generate_face(self):
         whole = pygame.Surface((200, 400))
@@ -82,6 +122,8 @@ class EV3BrickSim:
         f = pygame.font.SysFont(None, 20)
         whole.blit(f.render(str(self.buttons.pressed()), 1, (0, 0, 0)), (20, 160))
         return whole
+
+DEFAULT_SPEED = 20 # Speed to set to if max speed not set
 
 class DriveBaseSim:
     """
@@ -105,49 +147,156 @@ class DriveBaseSim:
     """
 
     def __init__(self, left_motor: Motor, right_motor: Motor, wheel_diameter: int, axle_track: int):
+        # TODO: Decide whether to have PIDs for the speed OR the absolute position, and how I'm going to accomplish all the functions with whatever I choose
         self.distance_control = Control()  # type: Control
         self.heading_control = Control()  # type: Control
+        self.heading_control.FRICTION = 0.01
+        # These are drive (distance) SPEED and turn (heading) SPEED PID controllers!
+        self.goals = [None, None]
         self.position = (0, 0)
+        self.rotation = 0
+        self.dowhendone = Stop.HOLD
+        # distance, turn
+        self.driven = [0, 0]
+        self.speeds = [0, 0]
+        self.to = [None, None]
+    
+    def straight(
+        self, distance: Number, then: Stop = Stop.HOLD, wait: bool = True
+    ) -> MaybeAwaitable:
+        """straight(distance, then=Stop.HOLD, wait=True)
 
-    def straight(self, distance: int):
-        """
-        Drives straight for a given distance then stops.
+        Drives straight for a given distance and then stops.
 
-        Args:
-            distance (int): Distance to travel in millimeters.
+        Arguments:
+            distance (Number, mm): Distance to travel
+            then (Stop): What to do after coming to a standstill.
+            wait (bool): Wait for the maneuver to complete before continuing
+                         with the rest of the program.
         """
-        ...
+        self.to[0] = distance
+        self.goals[0] = self.distance_control.ControlLimits[0] or DEFAULT_SPEED
+        if wait:
+            while not self.done():
+                pass
+        self.dowhendone = then
 
-    def turn(self, angle: int):
-        """
-        Turns in place by a given angle then stops.
+    def turn(
+        self, angle: Number, then: Stop = Stop.HOLD, wait: bool = True
+    ) -> MaybeAwaitable:
+        """turn(angle, then=Stop.HOLD, wait=True)
 
-        Args:
-            angle (int): Angle of the turn in degrees.
-        """
-        ...
+        Turns in place by a given angle and then stops.
 
-    def settings(self, straight_speed: int = None, straight_acceleration: int = None, turn_rate: int = None, turn_acceleration: int = None) -> tuple[int, int, int, int]:
+        Arguments:
+            angle (Number, deg): Angle of the turn.
+            then (Stop): What to do after coming to a standstill.
+            wait (bool): Wait for the maneuver to complete before continuing
+                         with the rest of the program.
         """
-        Configures the speed and acceleration used by straight() and turn().
+        self.to[1] = angle
+        self.goals[1] = self.heading_control.ControlLimits[0] or DEFAULT_SPEED
+        if wait:
+            while not self.done():
+                pass
+        self.dowhendone = then
+
+    def curve(
+        self, radius: Number, angle: Number, then: Stop = Stop.HOLD, wait: bool = True
+    ) -> MaybeAwaitable:
+        """curve(radius, angle, then=Stop.HOLD, wait=True)
+
+        Drives an arc along a circle of a given radius, by a given angle.
+
+        Arguments:
+            radius (Number, mm): Radius of the circle.
+            angle (Number, deg): Angle along the circle.
+            then (Stop): What to do after coming to a standstill.
+            wait (bool): Wait for the maneuver to complete before continuing
+                         with the rest of the program.
+        """
+        pass # TODO: This
+    
+    def done(self) -> bool:
+        """done() -> bool
+
+        Checks if an ongoing command or maneuver is done.
+
+        Returns:
+            ``True`` if the command is done, ``False`` if not.
+        """
+        return self.to == [None, None] # Maybe change???
+    
+    def stalled(self) -> bool:
+        """stalled() -> bool
+
+        Checks if the drive base is currently stalled.
+
+        It is stalled when it cannot reach the target speed or position, even
+        with the maximum actuation signal.
+
+        Returns:
+            ``True`` if the drivebase is stalled, ``False`` if not.
+        """
+        return False
+
+    def use_gyro(self, use_gyro: bool) -> None:
+        """use_gyro(use_gyro)
+
+        Choose ``True`` to use the gyro sensor for turning and driving
+        straight. Choose ``False`` to rely only on the motor's built-in
+        rotation sensors.
+
+        Arguments:
+            use_gyro (bool): ``True`` to enable, ``False`` to disable.
+        """
+        # TODO: This
+        pass
+
+    @overload
+    def settings(
+        self,
+        straight_speed: Optional[Number] = None,
+        straight_acceleration: Optional[Number] = None,
+        turn_rate: Optional[Number] = None,
+        turn_acceleration: Optional[Number] = None,
+    ) -> None: ...
+
+    @overload
+    def settings(self) -> tuple[int, int, int, int]: ...
+
+    def settings(self, *args):
+        """
+        settings(straight_speed, straight_acceleration, turn_rate, turn_acceleration)
+        settings() -> Tuple[int, int, int, int]
+
+        Configures the drive base speed and acceleration.
 
         If you give no arguments, this returns the current values as a tuple.
 
-        You can only change the settings while the robot is stopped. This is either before you begin driving or after you call stop().
+        The initial values are automatically configured based on your wheel
+        diameter and axle track. They are selected such that your robot
+        drives at about 40% of its maximum speed.
 
-        Args:
-            straight_speed (int):  Speed of the robot during straight() in millimeters/second.
-            straight_acceleration (int): Acceleration and deceleration of the robot at the start and end of straight() in millimeters/second^2.
-            turn_rate (int): Turn rate of the robot during turn() in degrees/second.
-            turn_acceleration (int): Angular acceleration and deceleration of the robot at the start and end of turn() in degrees/second^2.
+        The speed values given here do not apply to the :meth:`.drive` method,
+        since you provide your own speed values as arguments in that method.
 
-        Returns:
-            Straight speed (millimeters/second), straight acceleration (millimeters/second^2), turn rate (degrees/second), and turn acceleration (degrees/second^2) (if no arguments are provided), None otherwise.
+        Arguments:
+            straight_speed (Number, mm/s): Straight-line speed of the robot.
+            straight_acceleration (Number, mm/s²): Straight-line
+                acceleration and deceleration of the robot. Provide a tuple with
+                two values to set acceleration and deceleration separately.
+            turn_rate (Number, deg/s): Turn rate of the robot.
+            turn_acceleration (Number, deg/s²): Angular acceleration and
+                deceleration of the robot. Provide a tuple with
+                two values to set acceleration and deceleration separately.
         """
-        if straight_speed is None and straight_acceleration is None and turn_rate is None and turn_acceleration is None:
+        if args == ():
             return (0, 0, 0, 0)
         else:
-            return None
+            self.distance_control.limits(args[0], (None if len(args) < 2 else args[1]))
+            if len(args) > 2:
+                self.heading_control.limits(args[2], (None if len(args) < 4 else args[3]))
 
     def drive(self, drive_speed: int, turn_rate: int):
         """
@@ -157,13 +306,13 @@ class DriveBaseSim:
             drive_speed (int): Speed of the robot in millimeters/second.
             turn_rate (int): Turn rate of the robot in degrees/second.
         """
-        ...
+        self.goals = [drive_speed, turn_rate]
 
     def stop(self):
         """
         Stops the robot by letting the motors spin freely.
         """
-        ...
+        self.goals = [None, None]
 
     def distance(self) -> int:
         """
@@ -172,7 +321,7 @@ class DriveBaseSim:
         Returns:
             Driven distance since last reset in millimeters.
         """
-        return 0
+        return self.driven[0]
 
     def angle(self) -> int:
         """
@@ -181,7 +330,7 @@ class DriveBaseSim:
         Returns:
             Accumulated angle since last reset in degrees.
         """
-        return 0
+        return self.driven[1]
 
     def state(self) -> tuple[int, int, int, int]:
         """
@@ -192,10 +341,54 @@ class DriveBaseSim:
         Returns:
             Distance in millimeters, Drive Speed in millimeters/second, Angle in degrees, Rotational Speed in degrees/second
         """
-        return (0, 0, 0, 0)
+        return (self.distance(), self.speeds[0], self.angle(), self.speeds[1])
 
     def reset(self):
         """
         Resets the estimated driven distance and angle to 0.
         """
-        ...
+        self.driven = [0, 0]
+    
+    def brake(self):
+        """
+        Passively brakes the motor.
+
+        The motor stops due to friction, plus the voltage that is generated while the motor is still moving.
+        """
+        self.goal = 0
+    
+    def __call__(self) -> None:
+        if self.goals[0] is None:
+            dist_speed = self.distance_control(0, False)
+        else:
+            dist_speed = self.distance_control(self.goals[0])
+        
+        if self.goals[1] is None:
+            ang_speed = self.heading_control(0, False)
+        else:
+            ang_speed = self.heading_control(self.goals[1])
+        
+        self.speeds = [dist_speed, ang_speed]
+        
+        self.rotation += ang_speed
+        
+        add_pos = rotate((0, 0), (0, dist_speed), self.rotation)
+        self.position = (self.position[0] + add_pos[0], self.position[1] + add_pos[1])
+        
+        self.driven[0] += dist_speed
+        self.driven[1] += ang_speed
+
+        if self.to != [None, None]:
+            if self.to[0] is not None:
+                self.to[0] -= dist_speed
+                if self.to[0] <= 0:
+                    self.goals[0] = None
+                    self.to[0] = None
+            
+            if self.to[1] is not None:
+                self.to[1] -= ang_speed
+                if self.to[1] <= 0:
+                    self.goals[1] = None
+                    self.to[1] = None
+            if self.to == [None, None]: # It *now* finished everything!
+                self.dowhendone = Stop.HOLD

@@ -9,7 +9,9 @@ This uses micropython for the ev3 bricks!
 `pip install pybricks`
 
 ### For the sim
-`pip install pygame pyttsx3 simpleaudio`
+`pip install pygame pyttsx3`
+
+And also `pip install simpleaudio`, but if that doesn't work then you won't be able to have the sounds in the sim, but that's OK
 
 If running on Ubuntu you also need to FIRST run `sudo apt install libespeak1` and `sudo apt-get install -y libasound2-dev` for the sim to work too
 

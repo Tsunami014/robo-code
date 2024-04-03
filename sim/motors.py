@@ -1,9 +1,261 @@
-from pybricks._common import Control
 from pybricks.parameters import Direction, Port, Stop
-from typing import Union
+from typing import Union, Optional, Tuple, overload
+from sim.time import FRAME
 
-FRICTION = Control()
-FRICTION.pid(1, 0, 0) # TODO: Customise
+Number = Union[int, float]
+
+def _clamp(value, limits):
+    lower, upper = limits
+    if value is None:
+        return None
+    elif (upper is not None) and (value > upper):
+        return upper
+    elif (lower is not None) and (value < lower):
+        return lower
+    return value
+
+class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for the base PID code!
+    # TODO: Make trapezoid shape PID: Slows down when almost at goal
+    # But make it an option, and use the Stop.
+    """Class to interact with PID controller and settings."""
+
+    scale: int
+
+    """
+    Scaling factor between the controlled integer variable
+    and the physical output. For example, for a single
+    motor this is the number of encoder pulses per degree of rotation.
+    """
+    
+    def __init__(self) -> None:
+        self.current = 0
+        
+        self.FRICTION = 0.2
+
+        self.Kp, self.Ki, self.Kd = 1, 0, 0
+        # PID values
+        
+        self.ControlLimits = [None, None, None] # TODO: This
+        # speed, acceleration, torque
+        
+        self.TargetTs = [0, 0] # TODO: This
+        # speed, position; these tell how close to the speed/position you can be to be considered 'at the target'
+        
+        self.StallTs = [0, 0] # TODO: This
+        # speed, time; these tell how much speed/for how long that speed must be reached to be considered stalled
+
+        self.current_time = FRAME
+        self.last_time = self.current_time
+
+        self.clear()
+    
+    def clear(self):
+        """Clears PID computations and coefficients"""
+
+        self.last_error = 0.0
+
+        self._proportional = 0
+        self._integral = 0
+        self._derivative = 0
+
+        self._integral = _clamp(self._integral, (self.ControlLimits[0], None))
+
+        self._last_time = FRAME
+        self._last_output = None
+        self._last_input = None
+
+        # Windup Guard... do I keep???
+        self.int_error = 0.0
+        self.windup_guard = 20.0
+
+        self.output = 0.0
+
+    def __call__(self, goal: int, running: bool = True) -> None:
+        now = FRAME
+        
+        if not running:
+            output = self.current * self.FRICTION
+            
+            self._last_output = output
+            self._last_input = self.current
+            self._last_error = goal - self.current
+            self._last_time = now
+            
+            self.current = output
+            return output
+        
+        dt = now - self.last_time if (now - self.last_time) else 1e-16
+
+        # Compute error terms
+        error = goal - self.current
+        d_input = self.current - (self._last_input if (self._last_input is not None) else self.current)
+        d_error = error - (self._last_error if (self._last_error is not None) else error)
+
+        # Compute the proportional term
+        if not False: # Whether the proportional term should be calculated on the input directly rather than on the error (which is the traditional way). Using proportional-on-measurement avoids overshoot for some types of systems.
+            # Regular proportional-on-error, simply set the proportional term
+            self._proportional = self.Kp * error
+        else:
+            # Add the proportional error on measurement to error_sum
+            self._proportional -= self.Kp * d_input
+
+        # Compute integral and derivative terms
+        self._integral += self.Ki * error * dt
+        self._integral = _clamp(self._integral, (self.ControlLimits[0], None))  # Avoid integral windup
+
+        if True: # Whether the differential term should be calculated on the input directly rather than on the error (which is the traditional way).
+            self._derivative = -self.Kd * d_input / dt
+        else:
+            self._derivative = self.Kd * d_error / dt
+
+        # Compute final output
+        output = self._proportional + self._integral + self._derivative
+        output = _clamp(output, (self.ControlLimits[0], None))
+
+        # Keep track of state
+        self._last_output = output
+        self._last_input = self.current
+        self._last_error = error
+        self._last_time = now
+        
+        self.current = output
+
+        return output
+
+    @overload
+    def limits(
+        self,
+        speed: Optional[Number] = None,
+        acceleration: Optional[Number] = None,
+        torque: Optional[Number] = None,
+    ) -> None: ...
+
+    @overload
+    def limits(self) -> Tuple[int, int, int]: ...
+
+    def limits(self, *args):
+        """
+        limits(speed, acceleration, torque)
+        limits() -> Tuple[int, int, int]
+
+        Configures the maximum speed, acceleration, and torque.
+
+        If no arguments are given, this will return the current values.
+
+        The new ``acceleration`` and ``speed`` limit will become effective
+        when you give a new motor command. Ongoing maneuvers are not affected.
+
+        Arguments:
+            speed (Number, deg/s or Number, mm/s):
+                Maximum speed. All speed commands will be capped to this value.
+            acceleration (Number, deg/s² or Number, mm/s²):
+                Slope of the speed curve when accelerating or decelerating.
+                Use a tuple to set acceleration and deceleration separately.
+                If one value is given, it is used for both.
+            torque (:ref:`torque`):
+                Maximum feedback torque during control.
+        """
+        if args == ():
+            return tuple(self.ControlLimits)
+        for i in range(len(args)):
+            self.ControlLimits[i] = args[i]
+
+    @overload
+    def pid(
+        self,
+        kp: Optional[Number] = None,
+        ki: Optional[Number] = None,
+        kd: Optional[Number] = None,
+        integral_deadzone: Optional[Number] = None,
+        integral_rate: Optional[Number] = None,
+    ) -> None: ...
+
+    @overload
+    def pid(self) -> Tuple[int, int, int, int, int]: ...
+
+    def pid(self, *args):
+        """pid(kp, ki, kd, integral_deadzone, integral_rate)
+        pid() -> Tuple[int, int, int, int, int]
+
+        Gets or sets the PID values for position and speed control.
+
+        If no arguments are given, this will return the current values.
+
+        Arguments:
+            kp (int): Proportional position control
+                constant. It is the feedback torque per degree of
+                error: µNm/deg.
+            ki (int): Integral position control constant. It is the feedback
+                torque per accumulated degree of error: µNm/(deg s).
+            kd (int): Derivative position (or proportional speed) control
+                constant. It is the feedback torque per
+                unit of speed: µNm/(deg/s).
+            integral_deadzone (Number, deg or Number, mm): Zone around the
+                target where the error integral does not accumulate errors.
+            integral_rate (Number, deg/s or Number, mm/s): Maximum rate at
+                which the error integral is allowed to grow.
+        """
+        if args == ():
+            return self.Kp, self.Ki, self.Kd
+        self.Kp = args[0] or self.Kp
+        self.Ki = args[1] or self.Ki
+        self.Kd = args[2] or self.Kd
+
+    @overload
+    def target_tolerances(
+        self, speed: Optional[Number] = None, position: Optional[Number] = None
+    ) -> None: ...
+
+    @overload
+    def target_tolerances(self) -> Tuple[int, int]: ...
+
+    def target_tolerances(self, *args):
+        """target_tolerances(speed, position)
+        target_tolerances() -> Tuple[int, int]
+
+        Gets or sets the tolerances that say when a maneuver is done.
+
+        If no arguments are given, this will return the current values.
+
+        Arguments:
+            speed (Number, deg/s or Number, mm/s): Allowed deviation
+                from zero speed before motion is considered complete.
+            position (Number, deg or :ref:`distance`): Allowed
+                deviation from the target before motion is considered
+                complete.
+        """
+        if args == ():
+            return tuple(self.TargetTs)
+        for i in range(len(args)):
+            self.TargetTs[i] = args[i]
+
+    @overload
+    def stall_tolerances(
+        self, speed: Optional[Number] = None, time: Optional[Number] = None
+    ) -> None: ...
+
+    @overload
+    def stall_tolerances(self) -> Tuple[int, int]: ...
+
+    def stall_tolerances(self, *args):
+        """stall_tolerances(speed, time)
+        stall_tolerances() -> Tuple[int, int]
+
+        Gets or sets stalling tolerances.
+
+        If no arguments are given, this will return the current values.
+
+        Arguments:
+            speed (Number, deg/s or Number, mm/s): If the controller
+                cannot reach this speed for some ``time`` even with maximum
+                actuation, it is stalled.
+            time (Number, ms): How long the controller has to be below this
+                minimum ``speed`` before we say it is stalled.
+        """
+        if args == ():
+            return tuple(self.StallTs)
+        for i in range(len(args)):
+            self.StallTs[i] = args[i]
 
 class Motor:
     """
@@ -25,8 +277,9 @@ class Motor:
         if port == Port.S1 or port == Port.S2 or port == port.S3 or port == port.S4:
             raise ValueError("Motors must use Port A, B, C, or D.")
         self.control = Control()  # type: Control
+        # self.control is for simulating the motor increase and decrease in speed
         self.angle = 0 # degrees
-        self.speed = 0 # degrees/sec
+        self.goal = None
 
     def speed(self) -> int:
         """
@@ -35,7 +288,7 @@ class Motor:
         Returns:
             Motor speed in degrees/second.
         """
-        return self.speed
+        return self.control.current
 
     def angle(self) -> int:
         """
@@ -61,7 +314,7 @@ class Motor:
 
         The motor gradually stops due to friction.
         """
-        ... # TODO: This
+        self.goal = None
 
     def brake(self):
         """
@@ -69,13 +322,14 @@ class Motor:
 
         The motor stops due to friction, plus the voltage that is generated while the motor is still moving.
         """
-        ... # TODO: This
+        self.goal = 0
 
     def hold(self):
         """
         Stops the motor and actively holds it at its current angle.
         """
-        self.speed = 0
+        # TODO: This
+        pass
 
     def run(self, speed: int):
         """
@@ -86,7 +340,7 @@ class Motor:
         Args:
             speed (int): Speed of the motor in degrees/second.
         """
-        ... # TODO: This
+        self.goal = speed
 
     def run_time(self, speed: int, time: int, then: Stop = Stop.HOLD, wait: bool = True):
         """
@@ -162,3 +416,9 @@ class Motor:
             target_angle (int): Target angle that the motor should rotate to in degrees.
         """
         ... # TODO: This
+    
+    def __call__(self) -> None:
+        if self.goal is None:
+            self.control(0, False)
+        else:
+            self.control(self.goal)
