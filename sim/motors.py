@@ -1,6 +1,9 @@
-from pybricks.parameters import Direction, Port, Stop
+from pybricks.parameters import Direction, Port
+
+import sim.time as time
+
 from typing import Union, Optional, Tuple, overload
-from sim.time import FRAME
+from enum import Enum
 
 Number = Union[int, float]
 
@@ -14,8 +17,36 @@ def _clamp(value, limits):
         return lower
     return value
 
+class Stop(Enum):
+    """Action after the motor stops or reaches its target."""
+
+    COAST = 0
+    """Let the motor move freely."""
+
+    COAST_SMART = 4
+    """
+    Let the motor move freely. For the next relative angle maneuver,
+    take the last target angle (instead of the current angle) as the new
+    starting point. This reduces cumulative errors. This will apply only if the
+    current angle is less than twice the configured position tolerance.
+    """
+
+    BRAKE = 1
+    """Passively resist small external forces."""
+
+    HOLD = 2
+    """Keep controlling the motor to hold it at the commanded angle."""
+
+    NONE = 3
+    """
+    Do not decelerate when approaching the target position. This can be used
+    to concatenate multiple motor or drive base maneuvers without stopping. If
+    no further commands are given, the motor will proceed to run indefinitely
+    at the given speed.
+    """
+
 class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for the base PID code!
-    # TODO: Make trapezoid shape PID: Slows down when almost at goal
+    # TODO: Make trapezoid shape PID: Speed up at start and slow down when almost at goal
     # But make it an option, and use the Stop.
     """Class to interact with PID controller and settings."""
 
@@ -44,8 +75,7 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
         self.StallTs = [0, 0] # TODO: This
         # speed, time; these tell how much speed/for how long that speed must be reached to be considered stalled
 
-        self.current_time = FRAME
-        self.last_time = self.current_time
+        self.last_time = time.FRAME
 
         self.clear()
     
@@ -58,11 +88,10 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
         self._integral = 0
         self._derivative = 0
 
-        self._integral = _clamp(self._integral, (self.ControlLimits[0], None))
-
-        self._last_time = FRAME
-        self._last_output = None
         self._last_input = None
+        self._last_error = None
+
+        self.prev_accel = 0
 
         # Windup Guard... do I keep???
         self.int_error = 0.0
@@ -71,15 +100,12 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
         self.output = 0.0
 
     def __call__(self, goal: int, running: bool = True) -> None:
-        now = FRAME
+        now = time.FRAME
         
         if not running:
             output = self.current * self.FRICTION
-            
-            self._last_output = output
             self._last_input = self.current
-            self._last_error = goal - self.current
-            self._last_time = now
+            self.last_time = now
             
             self.current = output
             return output
@@ -94,14 +120,14 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
         # Compute the proportional term
         if not False: # Whether the proportional term should be calculated on the input directly rather than on the error (which is the traditional way). Using proportional-on-measurement avoids overshoot for some types of systems.
             # Regular proportional-on-error, simply set the proportional term
-            self._proportional = self.Kp * error
+            self._proportional += self.Kp * error
         else:
             # Add the proportional error on measurement to error_sum
             self._proportional -= self.Kp * d_input
 
         # Compute integral and derivative terms
         self._integral += self.Ki * error * dt
-        self._integral = _clamp(self._integral, (self.ControlLimits[0], None))  # Avoid integral windup
+        self._integral = self._integral  # Optional clamp to avoid integral windup
 
         if True: # Whether the differential term should be calculated on the input directly rather than on the error (which is the traditional way).
             self._derivative = -self.Kd * d_input / dt
@@ -110,13 +136,17 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
 
         # Compute final output
         output = self._proportional + self._integral + self._derivative
-        output = _clamp(output, (self.ControlLimits[0], None))
+        diff = output - self.current
+        diff = diff * (dt / time.FRAMERATE) # Convert from mm/frame to mm/sec
+        diff = _clamp(diff, (-self.ControlLimits[0], self.ControlLimits[0])) # Control the max speed by limiting how far it can move per time
+        if self.ControlLimits[1] is not None: # Control max acceleration by limiting how much it can change over time
+            max_diff = abs(self.prev_accel) + self.ControlLimits[1]
+            diff = _clamp(diff, (-max_diff, max_diff))
+        self.prev_accel = diff
 
         # Keep track of state
-        self._last_output = output
         self._last_input = self.current
         self._last_error = error
-        self._last_time = now
         
         self.current = output
 
@@ -158,7 +188,8 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
         if args == ():
             return tuple(self.ControlLimits)
         for i in range(len(args)):
-            self.ControlLimits[i] = args[i]
+            if args[i] is not None:
+                self.ControlLimits[i] = args[i]
 
     @overload
     def pid(
@@ -227,7 +258,8 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
         if args == ():
             return tuple(self.TargetTs)
         for i in range(len(args)):
-            self.TargetTs[i] = args[i]
+            if args[i] is not None:
+                self.TargetTs[i] = args[i]
 
     @overload
     def stall_tolerances(
