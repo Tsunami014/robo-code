@@ -22,43 +22,39 @@ class Speaker:
         self.engine = pyttsx3.init()
         self.beepvolume = 1
 
-    def beep(self, frequency: int = 500, duration: int = 100): # Thanks https://stackoverflow.com/questions/7816294/simple-pygame-audio-at-a-frequency!
+    def beep(self, frequency: int = 500, duration: int = 100):
         """
         Play a beep/tone.
 
         Args:
             frequency (int): Frequency of the beep in Hertz. Frequencies below 100 are treated as 100.
-            duration (int): Duration of the beep in milliseconds. If the duration is less than 0, then the method returns immediately, and the frequency play continues to play indefinitely.
+            duration (int): Duration of the beep in milliseconds. If the duration is less than 0, then the method returns immediately, and the frequency play continues to play indefinitely; TODO: That.
         """
+        # Thanks https://stackoverflow.com/questions/7816294/simple-pygame-audio-at-a-frequency for the idea and https://stackoverflow.com/questions/48043004/how-do-i-generate-a-sine-wave-using-python
         # Set sone vars
-        fade_in = 0.05
-        fade_out = 0.2
         volume = 1
-        frequency_l = frequency - 50
-        frequency_r = frequency + 50
-        
-        #this sounds totally different coming out of a laptop versus coming out of headphones
 
         sample_rate = 44100
+        n_samples = lambda time: int(round(time*sample_rate))
+        duration = n_samples(duration / 1000)
+        
+        fade_in = n_samples(0.01)
+        fade_out = n_samples(0.02)
+        
+        #kernel = 0.5**np.arange(5)
 
-        n_samples = int(round(duration*sample_rate))
-
-        #setup our numpy array to handle 16 bit ints, which is what we set our mixer to expect with "bits" up above
-        buf = np.zeros((n_samples, 2), dtype = np.int16)
-        max_sample = 2**(bits - 1) - 1
-
-        for s in range(n_samples):
-            t = float(s)/sample_rate    # time in seconds
-            # Apply volume, fade in and fade out
-            loudness = 1
-            if fade_in > 0 and t < fade_in:
-                loudness = loudness * (t / fade_in)
-            if fade_out > 0 and t > duration-fade_out:
-                loudness = loudness * ((duration-t) / fade_out)
-
-            #grab the x-coordinate of the sine wave at a given time, while constraining the sample to what our mixer is set to with "bits"
-            buf[s][0] = int(round(max_sample*math.sin(2*math.pi*frequency_l*t)) * loudness)        # left
-            buf[s][1] = int(round(max_sample*0.5*math.sin(2*math.pi*frequency_r*t)) * loudness)    # right
+        samples = np.arange(duration) / sample_rate
+        left_signal = np.sin(2 * np.pi * (frequency-50) * samples)
+        left_signal *= 32767
+        #left_signal[-fade_out:] = np.convolve(left_signal[-fade_out:], kernel, mode='full')[:len(left_signal[-fade_out:])]
+        
+        right_signal = np.sin(2 * np.pi * (frequency+50) * samples)
+        right_signal *= 32767
+        
+        buf = np.array(tuple(zip(left_signal, right_signal)))
+        buf = np.int16(buf)
+        buf[-fade_out:] = [buf[fade_out+i]*((duration-i) / duration) for i in range(len(buf[-fade_out:]))]
+        buf[:fade_in] = [buf[i]*(i / fade_in) for i in range(len(buf[:fade_in]))]
 
         sound = pygame.sndarray.make_sound(buf)
         sound.set_volume(volume)
