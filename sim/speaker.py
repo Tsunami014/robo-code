@@ -29,7 +29,7 @@ class Speaker:
 
         Args:
             frequency (int): Frequency of the beep in Hertz. Frequencies below 100 are treated as 100.
-            duration (int): Duration of the beep in milliseconds. If the duration is less than 0, then the method returns immediately, and the frequency play continues to play indefinitely; TODO: That.
+            duration (int): Duration of the beep in milliseconds. If the duration is less than 0, then the method returns immediately, and the frequency play continues to play indefinitely.
         """
         # Thanks https://stackoverflow.com/questions/7816294/simple-pygame-audio-at-a-frequency for the idea and https://stackoverflow.com/questions/48043004/how-do-i-generate-a-sine-wave-using-python
         # Set sone vars
