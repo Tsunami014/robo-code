@@ -120,7 +120,7 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
         # Compute the proportional term
         if not False: # Whether the proportional term should be calculated on the input directly rather than on the error (which is the traditional way). Using proportional-on-measurement avoids overshoot for some types of systems.
             # Regular proportional-on-error, simply set the proportional term
-            self._proportional += self.Kp * error
+            self._proportional = self.Kp * error
         else:
             # Add the proportional error on measurement to error_sum
             self._proportional -= self.Kp * d_input
@@ -135,7 +135,7 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
             self._derivative = self.Kd * d_error / dt
 
         # Compute final output
-        output = self._proportional + self._integral + self._derivative
+        output = self.current + self._proportional + self._integral + self._derivative
         diff = output - self.current
         diff = diff * (dt / time.FRAMERATE) # Convert from mm/frame to mm/sec
         diff = _clamp(diff, (-self.ControlLimits[0], self.ControlLimits[0])) # Control the max speed by limiting how far it can move per time
@@ -143,6 +143,7 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
             max_diff = abs(self.prev_accel) + self.ControlLimits[1]
             diff = _clamp(diff, (-max_diff, max_diff))
         self.prev_accel = diff
+        output = self.current + diff
 
         # Keep track of state
         self._last_input = self.current
@@ -229,8 +230,10 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
         if args == ():
             return self.Kp, self.Ki, self.Kd
         self.Kp = args[0] or self.Kp
-        self.Ki = args[1] or self.Ki
-        self.Kd = args[2] or self.Kd
+        if len(args) > 1:
+            self.Ki = args[1] or self.Ki
+        if len(args) > 2:
+            self.Kd = args[2] or self.Kd
 
     @overload
     def target_tolerances(

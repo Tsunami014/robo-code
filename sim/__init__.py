@@ -33,7 +33,7 @@ def rotate(origin, point, angle): # Thanks, https://stackoverflow.com/questions/
 
     The angle should be given in degrees.
     """
-    angle = math.radians(angle)
+    angle = math.radians(-angle)
     ox, oy = origin
     px, py = point
     
@@ -94,12 +94,13 @@ class EV3BrickSim:
             robot = pygame.Surface(sze)
             robot.fill((255, 255, 255))
             pygame.draw.rect(robot, 0, (0, 0, *sze), 8)
-            roboPic = pygame.font.Font(None, 100).render('=>', 1, 0)
+            roboPic = pygame.font.Font(None, 100).render('<=', 1, 0)
             robot.blit(roboPic, ((sze[0] - roboPic.get_width())/2, (sze[1] - roboPic.get_height())/2))
-            roted = pygame.transform.rotate(robot, drivebase.rotation)
+            roted = pygame.transform.rotate(robot, -drivebase.rotation-90)
             field.blit(roted, drivebase.position)
             
             # Put it all on the screen
+            # TODO: self.speaker.busy icon
             fieldpos = (10, 10)
             fieldsize = (200, 200)
             self.win.blit(scale_sur(field, fieldsize), fieldpos)
@@ -148,7 +149,9 @@ class DriveBaseSim:
     def __init__(self, left_motor: Motor, right_motor: Motor, wheel_diameter: int, axle_track: int):
         self.distance_control = (Control(), Control())  # type: list[Control]
         self.heading_control = Control()  # type: Control
+        self.heading_control.pid(0.1)
         self.heading_control.FRICTION = 0.01
+        self.heading_control.current = 90
         # These are drive (distance) POSITION and turn (heading) POSITION PID controllers!
         self.goals = [None, None, None]
         self.do = Stop.HOLD
@@ -156,7 +159,7 @@ class DriveBaseSim:
         self.driven = [0, 0]
         self.speeds = [0, 0]
         # How close you need to be to be considered 'at the target'
-        self.distance_tolerance = 0.2 # m
+        self.distance_tolerance = 0.2 # mm
         self.angle_tolerance = 1 # deg
         # TODO: The tuple
         # The current limits: straight_speed (mm/s), straight_acceleration (tuple[accel, deaccel], mm/s²), turn_rate (deg/s), turn_acceleration (tuple[accel, deaccel], deg/s²)
@@ -178,10 +181,18 @@ class DriveBaseSim:
             wait (bool): Wait for the maneuver to complete before continuing
                          with the rest of the program.
         """
+        if distance == 0:
+            return
         if self.prevspeeds is not None:
             self.settings(*self.prevspeeds)
             self.prevspeeds = None
-        self.goals[0], self.goals[1] = rotate(self.position, (self.position[0] + distance, self.position[1]), self.rotation)
+        newgoals = rotate(self.position, (self.position[0], self.position[1] - distance), -self.rotation)
+        newgoals = (round(newgoals[0], 5), round(newgoals[1], 5))
+        self.goals = [None, None, None]
+        if newgoals[0] != self.position[0]:
+            self.goals[0] = newgoals[0]
+        if newgoals[1] != self.position[1]:
+            self.goals[1] = newgoals[1]
         if wait:
             while not self.done():
                 pass
@@ -200,10 +211,12 @@ class DriveBaseSim:
             wait (bool): Wait for the maneuver to complete before continuing
                          with the rest of the program.
         """
+        if angle == 0:
+            return
         if self.prevspeeds is not None:
             self.settings(*self.prevspeeds)
             self.prevspeeds = None
-        self.goals[2] = self.rotation + angle
+        self.goals = [None, None, self.rotation + angle]
         if wait:
             while not self.done():
                 pass
@@ -245,7 +258,7 @@ class DriveBaseSim:
         Returns:
             ``True`` if the command is done, ``False`` if not.
         """
-        nones = [self.goals[0] is None or self.goals[1] is None, self.goals[2] is None]
+        nones = [self.goals[0] is None and self.goals[1] is None, self.goals[2] is None]
         if check_distance and check_angle and all(nones):
             return True
         elif check_angle and not check_distance and nones[1]:
@@ -421,15 +434,15 @@ class DriveBaseSim:
             return
         
         if not self.done(check_angle=False):
-            self.distance_control[0](self.goals[0])
-            self.distance_control[1](self.goals[1])
+            self.distance_control[0](self.goals[0], self.goals[0] is not None)
+            self.distance_control[1](self.goals[1], self.goals[1] is not None)
         else:
             if self.do == Stop.COAST:
                 self.distance_control[0](None, False)
                 self.distance_control[1](None, False)
         
         if not self.done(check_distance=False):
-            self.heading_control(self.goals[2])
+            self.heading_control(self.goals[2], self.goals[2] is not None)
         else:
             if self.do == Stop.COAST:
                 self.heading_control(None, False)

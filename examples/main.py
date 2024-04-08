@@ -8,22 +8,20 @@ from pybricks.tools import wait, StopWatch, DataLog
 from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
 
-class Sensors: # TODO: Simulate these
-    Ultrasonic = UltrasonicSensor(Port.S4)
-
 class Robot:
     def __init__(self):
         self.ev3 = EV3Brick()
         self.drivingconfig = (Motor(Port.B), Motor(Port.C), 55.5, 104)
         self.driving = DriveBase(*self.drivingconfig)
     
-    def test_follow(self):
+    def test_driving_simple(self):
+        self.ev3.speaker.beep(duration=1000)
         while True:
-            self.ev3.speaker.beep()
-            if Sensors.Ultrasonic.distance() > 30:
-                self.driving.straight(30)
-            else:
-                self.driving.straight(-30)
+            for i in range(4):
+                self.driving.straight(100)
+                self.ev3.speaker.beep(200*((i*2)+1))
+                self.driving.turn(90)
+                self.ev3.speaker.beep(200*((i*2)+2))
     
     def test_song(self):
         d = {
