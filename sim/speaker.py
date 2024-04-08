@@ -21,6 +21,7 @@ class Speaker:
     def __init__(self):
         self.engine = pyttsx3.init()
         self.beepvolume = 1
+        self.busy = False
 
     def beep(self, frequency: int = 500, duration: int = 100):
         """
@@ -33,6 +34,7 @@ class Speaker:
         # Thanks https://stackoverflow.com/questions/7816294/simple-pygame-audio-at-a-frequency for the idea and https://stackoverflow.com/questions/48043004/how-do-i-generate-a-sine-wave-using-python
         # Set sone vars
         volume = 1
+        forever = duration < 0
 
         sample_rate = 44100
         n_samples = lambda time: int(round(time*sample_rate))
@@ -53,14 +55,29 @@ class Speaker:
         
         buf = np.array(tuple(zip(left_signal, right_signal)))
         buf = np.int16(buf)
-        buf[-fade_out:] = [buf[fade_out+i]*((duration-i) / duration) for i in range(len(buf[-fade_out:]))]
-        buf[:fade_in] = [buf[i]*(i / fade_in) for i in range(len(buf[:fade_in]))]
+        if not forever:
+            buf[:fade_in] = [buf[i]*(i / fade_in) for i in range(len(buf[:fade_in]))]
+            buf[-fade_out:] = [buf[fade_out+i]*((duration-i) / duration) for i in range(len(buf[-fade_out:]))]
 
-        sound = pygame.sndarray.make_sound(buf)
-        sound.set_volume(volume)
-        chan = sound.play()
-        while chan.get_busy():
-            pass
+            sound = pygame.sndarray.make_sound(buf)
+            sound.set_volume(volume)
+            chan = sound.play()
+            self.busy = True
+            while chan.get_busy():
+                pass
+            self.busy = False
+        else:
+            sound1 = pygame.sndarray.make_sound(buf)
+            sound1.set_volume(volume)
+            buf[:fade_in] = [buf[i]*(i / fade_in) for i in range(len(buf[:fade_in]))]
+            sound2 = pygame.sndarray.make_sound(buf)
+            sound2.set_volume(volume)
+            chan = sound2.play()
+            self.busy = True
+            while chan.get_busy():
+                pass
+            self.busy = False
+            sound1.play(-1)
 
     def play_notes(self, notes: Iterable[str], tempo: int = 120):
         """
@@ -91,9 +108,11 @@ class Speaker:
         Args:
             file_name (str or SoundFile): Path to the sound file, including the file extension.
         """
+        self.busy = True
         wave = ConvertSoundFile(file_name)
         control = wave.play()
         control.wait_done()
+        self.busy = False
 
     def say(self, text: str):
         """
@@ -104,8 +123,10 @@ class Speaker:
         Args:
             text (str): What to say.
         """
+        self.busy = True
         self.engine.say(text)
         self.engine.runAndWait()
+        self.busy = False
 
     def set_speech_options(self, language: str = None, voice: str = None, speed: int = None, pitch: int = None):
         """
