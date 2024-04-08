@@ -23,7 +23,7 @@ class Stop(Enum):
     COAST = 0
     """Let the motor move freely."""
 
-    COAST_SMART = 4
+    COAST_SMART = 0 # TODO: This; for now we're just making it exactly the same as Stop.COAST
     """
     Let the motor move freely. For the next relative angle maneuver,
     take the last target angle (instead of the current angle) as the new
@@ -48,6 +48,7 @@ class Stop(Enum):
 class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for the base PID code!
     # TODO: Make trapezoid shape PID: Speed up at start and slow down when almost at goal
     # But make it an option, and use the Stop.
+    # But only do that when I go for speed PIDs instead of position PIDs
     """Class to interact with PID controller and settings."""
 
     scale: int
@@ -103,11 +104,16 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
         now = time.FRAME
         
         if not running:
-            output = self.current * self.FRICTION
+            output = self.current * ((self.FRICTION * (goal or 0)) or 1) # So the goal turns into the force of the brake:
+            # A goal of 0 means no movement at all - break
+            # A goal of 1 means it will apply friction
+            # A goal of 0.5 means it will have more friction, and a goal of 2 will have less
+            # And any other number follows the rules above DO NOT INPUT -1 I DON'T KNOW WHAT'LL HAPPEN
             self._last_input = self.current
             self.last_time = now
             
             self.current = output
+            self.prev_accel = output - self.current
             return output
         
         dt = now - self.last_time if (now - self.last_time) else 1e-16
@@ -140,8 +146,7 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
         diff = diff * (dt / time.FRAMERATE) # Convert from mm/frame to mm/sec
         diff = _clamp(diff, (-self.ControlLimits[0], self.ControlLimits[0])) # Control the max speed by limiting how far it can move per time
         if self.ControlLimits[1] is not None: # Control max acceleration by limiting how much it can change over time
-            max_diff = abs(self.prev_accel) + self.ControlLimits[1]
-            diff = _clamp(diff, (-max_diff, max_diff))
+            diff = _clamp(diff, (-(abs(self.prev_accel) + self.ControlLimits[1][1]), (abs(self.prev_accel) + self.ControlLimits[1][0])))
         self.prev_accel = diff
         output = self.current + diff
 
@@ -190,7 +195,11 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
             return tuple(self.ControlLimits)
         for i in range(len(args)):
             if args[i] is not None:
-                self.ControlLimits[i] = args[i]
+                if i == 1 and not isinstance(args[i], tuple):
+                    tup = (args[i], args[i])
+                    self.ControlLimits[i] = tup
+                else:
+                    self.ControlLimits[i] = args[i]
 
     @overload
     def pid(
