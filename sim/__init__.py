@@ -71,6 +71,7 @@ class EV3BrickSim:
         r = True
         t = Thread(target=function, name='Simulated EV3 program', daemon=True)
         t.start()
+        audioicon = pygame.image.load('sim/ims/audio.png')
         field = pygame.Surface(get_positions()['Rects']['Board_size'][1])
         clock = pygame.time.Clock()
         time.reset()
@@ -89,7 +90,7 @@ class EV3BrickSim:
             # Field
             field.fill((255, 255, 255))
             
-            # Robot
+            ## Robot
             sze = (100, 100)
             robot = pygame.Surface(sze)
             robot.fill((255, 255, 255))
@@ -100,13 +101,17 @@ class EV3BrickSim:
             field.blit(roted, drivebase.position)
             
             # Put it all on the screen
-            # TODO: self.speaker.busy icon
             fieldpos = (10, 10)
             fieldsize = (200, 200)
             self.win.blit(scale_sur(field, fieldsize), fieldpos)
             pygame.draw.rect(self.win, (139, 69, 19), (*fieldpos, *fieldsize), 8, 1)
             
-            self.win.blit(self.generate_face(), (fieldsize[0]+20, 10))
+            
+            self.win.blit(self.generate_face(), (fieldsize[0]+44, fieldpos[1]))
+            
+            if self.speaker.busy:
+                self.win.blit(audioicon, (fieldpos[0]+fieldsize[0]+10, fieldpos[1]))
+            
             
             # Update screen
             pygame.display.update()

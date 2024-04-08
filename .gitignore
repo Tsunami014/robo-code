@@ -2,6 +2,8 @@
 __pycache__/
 *.pyc
 .venv/
+# Do not commit svg files
+*.svg
 # DO NOT COMMIT PERSONAL CODE FOR THE ASSESMENT TASK (or whoever's code they used too)
 main.py
 test.py
