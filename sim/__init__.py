@@ -149,8 +149,8 @@ class DriveBaseSim:
     def __init__(self, left_motor: Motor, right_motor: Motor, wheel_diameter: int, axle_track: int):
         self.distance_control = (Control(), Control())  # type: list[Control]
         self.heading_control = Control()  # type: Control
-        self.heading_control.pid(0.1)
-        self.heading_control.FRICTION = 0.01
+        self.heading_control.pid(0.3)
+        self.heading_control.FRICTION = 0.01 # Much harder for friction to rotate you than to move you
         self.heading_control.current = 90
         # These are drive (distance) POSITION and turn (heading) POSITION PID controllers!
         self.goals = [None, None, None]
@@ -159,7 +159,7 @@ class DriveBaseSim:
         self.driven = [0, 0]
         self.speeds = [0, 0]
         # How close you need to be to be considered 'at the target'
-        self.distance_tolerance = 0.2 # mm
+        self.distance_tolerance = 2 # mm
         self.angle_tolerance = 1 # deg
         # TODO: The tuple
         # The current limits: straight_speed (mm/s), straight_acceleration (tuple[accel, deaccel], mm/s²), turn_rate (deg/s), turn_acceleration (tuple[accel, deaccel], deg/s²)
