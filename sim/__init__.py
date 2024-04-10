@@ -154,10 +154,10 @@ class DriveBaseSim:
     def __init__(self, left_motor: Motor, right_motor: Motor, wheel_diameter: int, axle_track: int):
         # These are drive (distance) SPEED and turn (heading) SPEED PID controllers!
         self.distance_control = Control()  # type: Control
-        self.distance_control.pid(10) # Tweak the PIDs of the distance control
+        self.distance_control.pid(100) # Tweak the PIDs of the distance control
         self.heading_control = Control()  # type: Control
         # Set some stuff to do with the heading control to make it slightly different to the distance control
-        self.heading_control.pid(6)
+        self.heading_control.pid(60)
         self.heading_control.FRICTION = 10 # Much harder for friction to rotate you than to move you
         self.heading_control.current = 90 # Because we start at a 90 degree rotation
         # distance, turn
@@ -223,7 +223,7 @@ class DriveBaseSim:
             return
         self._reset()
         self.driving = [False, True]
-        self.goals[1] = self.rotation + angle
+        self.goals[1] = angle
         
         self.do = then
         if wait:
@@ -413,6 +413,7 @@ class DriveBaseSim:
         self.goals = [None, None]
     
     def __call__(self) -> None:
+        # print(self.goals, self.driving, sep='\n', end='\n\n')
         speeds = [None, None]
         if self.driving[0] and self.goals[0] is not None:
             newgoalpos = rotate(self.position, (self.position[0], self.position[1] - self.goals[0]), -self.rotation)
@@ -421,11 +422,12 @@ class DriveBaseSim:
         else:
             speeds[0] = self.distance_control(None, self.do, False)
         if self.driving[1] and self.goals[1] is not None:
-            speeds[1] = self.heading_control(self.goals[1] - self.rotation, self.do)
+            speeds[1] = self.heading_control(self.goals[1], self.do)
         else:
             speeds[1] = self.heading_control(None, self.do, False)
         
         self.speeds = speeds
+        # print(speeds)
         
         self.driven[0] += self.speeds[0]
         self.driven[1] += self.speeds[1]
@@ -440,3 +442,4 @@ class DriveBaseSim:
                 self.goals[1] = None
         
         self.position = rotate(self.position, (self.position[0], self.position[1] - self.speeds[0]), -self.rotation)
+        self.rotation += self.speeds[1]

@@ -128,7 +128,9 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
             return output
 
         # Compute error terms
-        if stop == Stop.NONE:
+        goal = self.ControlLimits[0]
+        # TODO: Make the below actually work
+        """if stop == Stop.NONE:
             goal = self.ControlLimits[0]
         else:
             # TODO: Make sure you still move even if you are in range of the goal
@@ -143,7 +145,7 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
             if closest >= maindiff:
                 goal = 0
             else:
-                goal = self.ControlLimits[0]
+                goal = self.ControlLimits[0]"""
         error = goal - self.current
         d_input = self.current - (self._last_input if (self._last_input is not None) else self.current)
         d_error = error - (self._last_error if (self._last_error is not None) else error)
