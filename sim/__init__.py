@@ -7,6 +7,7 @@ from sim.ev3 import Battery, Buttons, Light, Screen
 from sim.speaker import Speaker
 from sim.motors import Motor, Control, Number, Stop
 import sim.time as time
+from sim.objects import Obj
 
 from dat import get_positions
 
@@ -69,14 +70,18 @@ class EV3BrickSim:
     
     def simulate(self, function, drivebase):
         r = True
-        t = Thread(target=function, name='Simulated EV3 program', daemon=True)
-        t.start()
+        rawobjs = get_positions()['Objects']
+        objs = [
+            Obj(pygame.color.THECOLORS[i.strip('_box').lower()], rawobjs[i]) for i in rawobjs
+        ]
         audioicon = pygame.image.load('sim/ims/audio.png')
         field = pygame.Surface(get_positions()['Rects']['Board_size'][1])
         clock = pygame.time.Clock()
         time.reset()
         fr = 60
         time.set_fr(fr)
+        t = Thread(target=function, name='Simulated EV3 program', daemon=True)
+        t.start()
         while r:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -89,16 +94,21 @@ class EV3BrickSim:
             
             # Field
             field.fill((255, 255, 255))
-            
+
             ## Robot
             sze = (100, 100)
             robot = pygame.Surface(sze)
             robot.fill((255, 255, 255))
             pygame.draw.rect(robot, 0, (0, 0, *sze), 8)
+            pygame.draw.rect(robot, (255, 255, 255), (0, 0, *sze), 1)
             roboPic = pygame.font.Font(None, 100).render('<=', 1, 0)
             robot.blit(roboPic, ((sze[0] - roboPic.get_width())/2, (sze[1] - roboPic.get_height())/2))
             roted = pygame.transform.rotate(robot, -drivebase.rotation-90)
             field.blit(roted, drivebase.position)
+            
+            ## Objs
+            for o in objs:
+                o.draw(field)
             
             # Put it all on the screen
             fieldpos = (10, 10)
