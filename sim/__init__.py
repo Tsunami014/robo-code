@@ -152,32 +152,35 @@ class DriveBaseSim:
     """
 
     def __init__(self, left_motor: Motor, right_motor: Motor, wheel_diameter: int, axle_track: int):
-        self.distance_control = (Control(), Control())  # type: list[Control]
+        # These are drive (distance) SPEED and turn (heading) SPEED PID controllers!
+        self.distance_control = Control()  # type: Control
+        self.distance_control.pid(10) # Tweak the PIDs of the distance control
         self.heading_control = Control()  # type: Control
-        self.heading_control.pid(0.3)
-        self.heading_control.FRICTION = 0.01 # Much harder for friction to rotate you than to move you
+        # Set some stuff to do with the heading control to make it slightly different to the distance control
+        self.heading_control.pid(6)
+        self.heading_control.FRICTION = 10 # Much harder for friction to rotate you than to move you
         self.heading_control.current = 90 # Because we start at a 90 degree rotation
-        # These are drive (distance) POSITION and turn (heading) POSITION PID controllers!
-        # I realised a bit too late that I should've probably made those the speed instead of absolute position, but
-        # it's too late to change that now, and also the math is going to be annoying to make and it works so that's all I need from it
-        # If I have time, maybe I'll change it??
-        self.goals = [None, None, None]
-        self.do = Stop.HOLD
         # distance, turn
+        self.driving = [False, False]
+        self.goals = [None, None]
         self.driven = [0, 0]
         self.speeds = [0, 0]
+        
+        # Set starting stuff
+        self.position = [0, 0]
+        self.rotation = 90
+        self.do = Stop.HOLD
+        
         # How close you need to be to be considered 'at the target'
         # I know they're big numbers, but o well
         self.distance_tolerance = 10 # mm
         self.angle_tolerance = 2 # deg
-        self.nostoptolerances = (20, 5) # dist, angle
         # Not needed yet
         self.prevspeeds = None
-        self.prevtolerances = None
         # The current limits: straight_speed (mm/s), straight_acceleration (tuple[accel, deaccel], mm/s²), turn_rate (deg/s), turn_acceleration (tuple[accel, deaccel], deg/s²)
         # self.limits is defined when we run self.settings
         self.limits = [None, None, None, None]
-        self.settings(50, 10, 10, 1)
+        self.settings(100, 10, 90, 10)
     
     def straight(
         self, distance: Number, then: Stop = Stop.HOLD, wait: bool = True
@@ -194,25 +197,14 @@ class DriveBaseSim:
         """
         if distance == 0:
             return
-        self._check_prev()
-        newgoals = rotate(self.position, (self.position[0], self.position[1] - distance), -self.rotation)
-        newgoals = (round(newgoals[0], 5), round(newgoals[1], 5))
-        self.goals = [None, None, None]
-        if newgoals[0] != self.position[0]:
-            self.goals[0] = newgoals[0]
-        if newgoals[1] != self.position[1]:
-            self.goals[1] = newgoals[1]
+        self._reset()
+        self.driving = [True, False]
+        self.goals = [distance, None]
         
-        if then == Stop.NONE:
-            if self.prevtolerances is None:
-                self.prevtolerances = (self.distance_tolerance, self.angle_tolerance)
-            self.distance_tolerance = self.nostoptolerances[0]
-            self.angle_tolerance = self.nostoptolerances[1]
-        
+        self.do = then
         if wait:
             while not self.done():
                 pass
-        self.do = then
 
     def turn(
         self, angle: Number, then: Stop = Stop.HOLD, wait: bool = True
@@ -229,19 +221,14 @@ class DriveBaseSim:
         """
         if angle == 0:
             return
-        self._check_prev()
-        self.goals = [None, None, self.rotation + angle]
+        self._reset()
+        self.driving = [False, True]
+        self.goals[1] = self.rotation + angle
         
-        if then == Stop.NONE:
-            if self.prevtolerances is None:
-                self.prevtolerances = (self.distance_tolerance, self.angle_tolerance)
-            self.distance_tolerance = self.nostoptolerances[0]
-            self.angle_tolerance = self.nostoptolerances[1]
-        
+        self.do = then
         if wait:
             while not self.done():
                 pass
-        self.do = then
 
     def curve(
         self, radius: Number, angle: Number, then: Stop = Stop.HOLD, wait: bool = True
@@ -257,15 +244,7 @@ class DriveBaseSim:
             wait (bool): Wait for the maneuver to complete before continuing
                          with the rest of the program.
         """
-        pass # TODO: This
-
-    @property
-    def position(self) -> tuple[int,int]:
-        return (self.distance_control[0].current, self.distance_control[1].current)
-
-    @property
-    def rotation(self) -> int:
-        return self.heading_control.current
+        raise NotImplementedError('Function "curve" has not been implemented for the sim yet!')
     
     def done(self, check_distance: bool = True, check_angle: bool = True) -> bool:
         """done() -> bool
@@ -279,17 +258,9 @@ class DriveBaseSim:
         Returns:
             ``True`` if the command is done, ``False`` if not.
         """
-        nones = [self.goals[0] is None and self.goals[1] is None, self.goals[2] is None]
-        if check_distance and check_angle and all(nones):
-            return True
-        elif check_angle and not check_distance and nones[1]:
-            return True
-        elif check_distance and not check_angle and nones[0]:
-            return True
         return all([
-            (not check_distance) or self.goals[0] is None or abs(self.goals[0] - self.distance_control[0].current) < self.distance_tolerance,
-            (not check_distance) or self.goals[1] is None or abs(self.goals[1] - self.distance_control[1].current) < self.distance_tolerance,
-            (not check_angle) or self.goals[2] is None or abs(self.goals[2] - self.heading_control.current) < self.angle_tolerance
+            (not check_distance) or self.goals[0] is None or abs(self.goals[0]) < self.distance_tolerance,
+            (not check_angle) or self.goals[1] is None or abs(self.goals[1]) < self.angle_tolerance
         ])
     
     def stalled(self) -> bool:
@@ -363,8 +334,7 @@ class DriveBaseSim:
             for i in range(len(args)):
                 if args[i] is not None:
                     self.limits[i] = args[i]
-            self.distance_control[0].limits(args[0], args[1])
-            self.distance_control[1].limits(args[0], args[1])
+            self.distance_control.limits(args[0], args[1])
             self.heading_control.limits(args[2], args[3])
             if self.prevspeeds is not None:
                 self.prevspeeds = self.limits.copy()
@@ -380,15 +350,15 @@ class DriveBaseSim:
         if self.prevspeeds is None:
             self.prevspeeds = self.limits.copy()
         self.settings(drive_speed, None, turn_rate, None)
-        self.goals = [None, None, None]
+        self.goals = [None, None]
+        self.driving = [drive_speed != 0, turn_rate != 0]
         self.do = DONTSTOPMOVING
 
     def stop(self):
         """
         Stops the robot by letting the motors spin freely.
         """
-        self._check_prev()
-        self.goals = [None, None, None]
+        self._reset()
         self.do = Stop.COAST
 
     def distance(self) -> int:
@@ -432,70 +402,41 @@ class DriveBaseSim:
 
         The motor stops due to friction, plus the voltage that is generated while the motor is still moving.
         """
-        self._check_prev()
-        self.goals = [None, None, None]
+        self._reset()
         self.do = Stop.BRAKE
     
-    def _check_prev(self):
+    def _reset(self):
         if self.prevspeeds is not None:
             self.settings(*self.prevspeeds)
             self.prevspeeds = None
-        if self.prevtolerances is not None:
-            self.distance_tolerance = self.prevtolerances[0]
-            self.angle_tolerance = self.prevtolerances[1]
-            self.prevtolerances = None
+        self.driving = [False, False]
+        self.goals = [None, None]
     
     def __call__(self) -> None:
-        prev_pos = self.position
-        prev_ang = self.rotation
-        
-        if self.do == DONTSTOPMOVING:
-            newgoal = rotate(prev_pos, (prev_pos[0], prev_pos[1] + self.limits[0]), self.rotation)
-            newgoal = (round(newgoal[0], 5), round(newgoal[1], 5))
-            if newgoal[0] != self.position[0]:
-                self.distance_control[0](newgoal[0])
-            else:
-                self.distance_control[0](1, False)
-            if newgoal[1] != self.position[1]:
-                self.distance_control[1](newgoal[1])
-            else:
-                self.distance_control[1](1, False)
-            
-            self.heading_control(self.rotation + self.limits[2])
-            
-            self.speeds = [(abs(prev_pos[0] - self.position[0]) + abs(prev_pos[1] - self.position[1])), abs(prev_ang - self.rotation)]
-        
-            self.driven[0] += self.speeds[0]
-            self.driven[1] += self.speeds[1]
-            return
-        
-        dogoal = None
-        if self.do == Stop.COAST or self.do == Stop.NONE:
-            dogoal = 1
-        elif self.do == Stop.BRAKE:
-            dogoal = 0.5
-        elif self.do == Stop.HOLD:
-            dogoal = 0
-        
-        if not self.done(check_angle=False):
-            if self.goals[0] is not None:
-                self.distance_control[0](self.goals[0])
-            else:
-                self.distance_control[0](dogoal, False)
-            if self.goals[1] is not None:
-                self.distance_control[1](self.goals[1])
-            else:
-                self.distance_control[1](dogoal, False)
+        speeds = [None, None]
+        if self.driving[0] and self.goals[0] is not None:
+            newgoalpos = rotate(self.position, (self.position[0], self.position[1] - self.goals[0]), -self.rotation)
+            diff = abs(self.position[0] - newgoalpos[0]) + abs(self.position[1] - newgoalpos[1])
+            speeds[0] = self.distance_control(diff, self.do)
         else:
-            self.distance_control[0](dogoal, False)
-            self.distance_control[1](dogoal, False)
-        
-        if not self.done(check_distance=False):
-            self.heading_control(self.goals[2]) # Why would self.goals[2] ever be None if that's what we're checking in self.done()?
+            speeds[0] = self.distance_control(None, self.do, False)
+        if self.driving[1] and self.goals[1] is not None:
+            speeds[1] = self.heading_control(self.goals[1] - self.rotation, self.do)
         else:
-            self.heading_control(dogoal, False)
+            speeds[1] = self.heading_control(None, self.do, False)
         
-        self.speeds = [(abs(prev_pos[0] - self.position[0]) + abs(prev_pos[1] - self.position[1])), abs(prev_ang - self.rotation)]
+        self.speeds = speeds
         
         self.driven[0] += self.speeds[0]
         self.driven[1] += self.speeds[1]
+        
+        if self.goals[0] is not None:
+            self.goals[0] -= self.speeds[0]
+            if self.goals[0] <= 0:
+                self.goals[0] = None
+        if self.goals[1] is not None:
+            self.goals[1] -= self.speeds[1]
+            if self.goals[1] <= 0:
+                self.goals[1] = None
+        
+        self.position = rotate(self.position, (self.position[0], self.position[1] - self.speeds[0]), -self.rotation)

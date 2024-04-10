@@ -4,6 +4,7 @@ import sim.time as time
 
 from typing import Union, Optional, Tuple, overload
 from enum import Enum
+from math import ceil
 
 Number = Union[int, float]
 
@@ -62,7 +63,7 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
     def __init__(self) -> None:
         self.current = 0
         
-        self.FRICTION = 0.2
+        self.FRICTION = 2
 
         self.Kp, self.Ki, self.Kd = 1, 0, 0
         # PID values
@@ -100,25 +101,49 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
 
         self.output = 0.0
 
-    def __call__(self, goal: int, running: bool = True) -> None:
+    def __call__(self, maindiff: int, stop: Stop, running: bool = True) -> None:
         now = time.FRAME
+        dt = 1#now - self.last_time if (now - self.last_time) else 1e-16
         
         if not running:
-            output = self.current * ((self.FRICTION * (goal or 0)) or 1) # So the goal turns into the force of the brake:
-            # A goal of 0 means no movement at all - break
-            # A goal of 1 means it will apply friction
-            # A goal of 0.5 means it will have more friction, and a goal of 2 will have less
-            # And any other number follows the rules above DO NOT INPUT -1 I DON'T KNOW WHAT'LL HAPPEN
+            friction = None
+            if stop == Stop.NONE:
+                friction = 0
+            if stop == Stop.COAST:
+                friction = 1
+            elif stop == Stop.BRAKE:
+                friction = 2
+            elif stop == Stop.HOLD:
+                friction = 5
+            # A goal of 0 means no movement at all - keep moving at same speed
+            # A goal of 1 means it will apply friction - slowly decelerate
+            # A goal of <1 means it will less friction (slow down slower), and a goal of >1 will have more (slow down faster)
+            output = round(self.current / (self.FRICTION * (friction or 5)), 10) # So the goal turns into the force of the brake:
+            
             self._last_input = self.current
             self.last_time = now
             
             self.current = output
-            self.prev_accel = output - self.current
+            self.prev_accel = ((output - self.current) / dt) * time.FRAMERATE # Convert from mm/(amount of frames) to mm/sec
             return output
-        
-        dt = now - self.last_time if (now - self.last_time) else 1e-16
 
         # Compute error terms
+        if stop == Stop.NONE:
+            goal = self.ControlLimits[0]
+        else:
+            # TODO: Make sure you still move even if you are in range of the goal
+            # Convert from mm/sec to mm/frame
+            maxaccel = self.ControlLimits[1][1] / time.FRAMERATE
+            maxspeed = self.ControlLimits[0] / time.FRAMERATE
+            # Calculate how close you need to be before stopping
+            # Round to make sure calculations aren't getting tuck due to stray numbers
+            maxframes = ceil(round(maxspeed / maxaccel,8)) # How many frames needed to get from max to min, because you slow down by your max accel every frame
+            framemovements = [maxaccel * i for i in range(maxframes)] + [maxspeed]
+            closest = sum(framemovements) # The closest you can be before the goal to arrive at the correct position if you start slowing down right now
+            if closest >= maindiff:
+                goal = 0
+            else:
+                goal = self.ControlLimits[0]
         error = goal - self.current
         d_input = self.current - (self._last_input if (self._last_input is not None) else self.current)
         d_error = error - (self._last_error if (self._last_error is not None) else error)
@@ -140,15 +165,19 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
         else:
             self._derivative = self.Kd * d_error / dt
 
-        # Compute final output
-        output = self.current + self._proportional + self._integral + self._derivative
-        diff = output - self.current
-        diff = diff * (dt / time.FRAMERATE) # Convert from mm/frame to mm/sec
-        diff = _clamp(diff, (-self.ControlLimits[0], self.ControlLimits[0])) # Control the max speed by limiting how far it can move per time
+        # Compute difference
+        diff = self._proportional + self._integral + self._derivative
+        # Clamp the difference to control max accel
+        diff = diff / dt # Convert from mm/(amount of frames) to mm/1 frame
+        diff = diff * time.FRAMERATE # Convert from mm/frame to mm/sec
         if self.ControlLimits[1] is not None: # Control max acceleration by limiting how much it can change over time
             diff = _clamp(diff, (-(abs(self.prev_accel) + self.ControlLimits[1][1]), (abs(self.prev_accel) + self.ControlLimits[1][0])))
         self.prev_accel = diff
-        output = self.current + diff
+        output = (self.current * time.FRAMERATE) + diff # Get the new output, converting old from mm/frame to mm/sec
+        # Clamp the maximum to account for max speed limits
+        #output = output / (dt / time.FRAMERATE) # Convert output to mm/sec
+        output = _clamp(output, (-self.ControlLimits[0], self.ControlLimits[0])) # Control the max speed
+        output = output / time.FRAMERATE # Convert back to mm/frame, getting FINAL output!
 
         # Keep track of state
         self._last_input = self.current
@@ -156,7 +185,7 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
         
         self.current = output
 
-        return output
+        return output * dt # Finds the output taking into account delta time
 
     @overload
     def limits(
