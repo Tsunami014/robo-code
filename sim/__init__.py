@@ -52,6 +52,12 @@ def rotate(origin, point, angle): # Thanks, https://stackoverflow.com/questions/
     qy = oy + sin * xdiff + cos * ydiff
     return qx, qy
 
+def fixangle(angle):
+    angle = angle % 360
+    if angle > 180:
+        angle = (-180) + (angle - 180)
+    return angle
+
 class EV3BrickSim:
     """
     A class to represent a LEGO® MINDSTORMS® EV3 Brick.
@@ -256,7 +262,7 @@ class DriveBaseSim:
             return
         self._reset()
         self.driving = [False, True]
-        self.goals[1] = angle
+        self.goals[1] = fixangle(angle)
         
         self.do = then
         if wait:
@@ -465,11 +471,11 @@ class DriveBaseSim:
         
         if self.goals[0] is not None:
             self.goals[0] -= self.speeds[0]
-            if self.goals[0] <= 0:
+            if abs(self.goals[0]) <= 0:
                 self.goals[0] = None
         if self.goals[1] is not None:
             self.goals[1] -= self.speeds[1]
-            if self.goals[1] <= 0:
+            if abs(self.goals[1]) <= 0:
                 self.goals[1] = None
         
         self.position = rotate(self.position, (self.position[0], self.position[1] - self.speeds[0]), -self.rotation)

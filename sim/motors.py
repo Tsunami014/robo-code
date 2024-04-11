@@ -4,7 +4,6 @@ import sim.time as time
 
 from typing import Union, Optional, Tuple, overload
 from enum import Enum
-from math import ceil
 
 Number = Union[int, float]
 
@@ -128,7 +127,10 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
             return output
 
         # Compute error terms
-        goal = self.ControlLimits[0]
+        if maindiff < 0:
+            goal = -self.ControlLimits[0]
+        else:
+            goal = self.ControlLimits[0]
         # TODO: Make the below actually work
         """if stop == Stop.NONE:
             goal = self.ControlLimits[0]
