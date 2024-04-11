@@ -369,8 +369,6 @@ class DriveBaseSim:
                     self.limits[i] = args[i]
             self.distance_control.limits(args[0], args[1])
             self.heading_control.limits(args[2], args[3])
-            if self.prevspeeds is not None:
-                self.prevspeeds = self.limits.copy()
 
     def drive(self, drive_speed: int, turn_rate: int):
         """
