@@ -17,15 +17,19 @@ MaybeAwaitable = None | Awaitable[None]
 from threading import Thread
 import math
 
-def scale_sur(sur, size):
+def scale_sur(sur, size, verbose=False) -> pygame.Surface | tuple[pygame.Surface, bool, float, pygame.Surface, float]:
     scaled = pygame.Surface(size)
     scaled.fill(0)
     scale = min([size[0] / sur.get_width(), size[1] / sur.get_height()])
     newsur = pygame.transform.scale(sur, (int(sur.get_width() * scale), int(sur.get_height() * scale)))
     if newsur.get_width() < size[0]:
-        scaled.blit(newsur, ((size[0] - newsur.get_width()) / 2, 0))
+        diff = (size[0] - newsur.get_width()) / 2
+        scaled.blit(newsur, (diff, 0))
     else:
-        scaled.blit(newsur, (0, (size[1] - newsur.get_height()) / 2))
+        diff = (size[1] - newsur.get_height()) / 2
+        scaled.blit(newsur, (0, diff))
+    if verbose:
+        return scaled, newsur.get_width() < size[0], diff, newsur, scale
     return scaled
 
 def rotate(origin, point, angle): # Thanks, https://stackoverflow.com/questions/34372480/rotate-point-about-another-point-in-degrees-python!
@@ -74,6 +78,7 @@ class EV3BrickSim:
         objs = [
             Obj(pygame.color.THECOLORS[i.strip('_box').lower()], rawobjs[i]) for i in rawobjs
         ]
+        font = pygame.font.SysFont(None, 16)
         audioicon = pygame.image.load('sim/ims/audio.png')
         field = pygame.Surface(get_positions()['Rects']['Board_size'][1])
         clock = pygame.time.Clock()
@@ -110,18 +115,36 @@ class EV3BrickSim:
             for o in objs:
                 o.draw(field)
             
-            # Put it all on the screen
+            ## set some params
             fieldpos = (10, 10)
             fieldsize = (200, 200)
-            self.win.blit(scale_sur(field, fieldsize), fieldpos)
+            fieldsur, is_hori, diff, smaller, scale = scale_sur(field, fieldsize, True) # Verbose used for mouse pos
+            
+            ## Get mouse relative to field
+            mpos = pygame.mouse.get_pos()
+            mpos = [mpos[0] - fieldpos[0], mpos[1] - fieldpos[1]]
+            if is_hori:
+                mpos[0] -= diff
+            else:
+                mpos[1] -= diff
+            # use_mpos = not any([mpos[0] < 0 or mpos[0] > smaller.get_width(), mpos[1] < 0 or mpos[1] > smaller.get_height()])
+            
+            mpos[0] /= scale
+            mpos[1] /= scale
+            keeponfield = lambda val, spot: min(max(val, 0), field.get_size()[spot])
+            mpos = [keeponfield(round(mpos[0], 1), 0), keeponfield(round(mpos[1], 1), 0)]
+            
+            # Put it all on the screen
+            self.win.blit(fieldsur, fieldpos)
             pygame.draw.rect(self.win, (139, 69, 19), (*fieldpos, *fieldsize), 8, 1)
             
+            # if use_mpos:
+            self.win.blit(font.render(str(mpos), 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 10))
             
             self.win.blit(self.generate_face(), (fieldsize[0]+44, fieldpos[1]))
             
             if self.speaker.busy:
                 self.win.blit(audioicon, (fieldpos[0]+fieldsize[0]+10, fieldpos[1]))
-            
             
             # Update screen
             pygame.display.update()
@@ -154,14 +177,14 @@ class DriveBaseSim:
         distance_control (Control): The traveled distance and drive speed are controlled by a PID controller. You can use this attribute to change its settings.
         heading_control (Control): The robot turn angle and turn rate are controlled by a PID controller. You can use this attribute to change its settings.
 
-    Args:
+    Old Args: (The args aren't used anymore, but # TODO: Make them used)
         left_motor (Motor): The motor that drives the left wheel.
         right_motor (Motor): The motor that drives the right wheel.
         wheel_diameter (int): Diameter of the wheels in millimeters.
         axle_track (int): Distance between the points where both wheels touch the ground in millimeters.
     """
 
-    def __init__(self, left_motor: Motor, right_motor: Motor, wheel_diameter: int, axle_track: int):
+    def __init__(self):
         # These are drive (distance) SPEED and turn (heading) SPEED PID controllers!
         self.distance_control = Control()  # type: Control
         self.distance_control.pid(100) # Tweak the PIDs of the distance control
