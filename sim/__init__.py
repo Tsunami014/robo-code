@@ -134,6 +134,8 @@ class EV3BrickSim:
                             path = [drivebase.position]
                         elif event.key == pygame.K_i:
                             path.append(drivebase.position)
+                        elif event.key == pygame.K_d:
+                            drivebase.position = path.pop()
             
             # More field stuff
             ## Robot
@@ -165,13 +167,14 @@ class EV3BrickSim:
             # if use_mpos:
             self.win.blit(font.render(str(mpos), 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 10))
             
-            self.win.blit(self.generate_face(), (fieldsize[0]+44, fieldpos[1]))
+            self.win.blit(self.generate_face(), (fieldsize[0]+44, fieldpos[1])) # TODO: In path plotter do not list the key presses until start simulating
             
             if path_plotter:
                 self.win.blit(font.render("Path plotter enabled!", 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 30))
                 paras = [
                     "R: Restart (empty path)",
                     "I: Insert current position to path",
+                    "D: Delete last position on path (and go to it)"
                     "",
                     "Current path:",
                     "[" + ", ".join([f"({str(round(i[0], 2))}, {str(round(i[1], 2))})" for i in path]) + "]"
