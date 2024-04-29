@@ -452,14 +452,22 @@ class DriveBaseSim:
     def __call__(self) -> None:
         # print(self.goals, self.driving, sep='\n', end='\n\n')
         speeds = [None, None]
-        if self.driving[0] and self.goals[0] is not None:
-            newgoalpos = rotate(self.position, (self.position[0], self.position[1] - self.goals[0]), -self.rotation)
+        if self.driving[0] or self.goals[0] is not None:
+            if self.goals[0] is not None:
+                goal = self.goals[0]
+            else:
+                goal = 100
+            newgoalpos = rotate(self.position, (self.position[0], self.position[1] - goal), -self.rotation)
             diff = abs(self.position[0] - newgoalpos[0]) + abs(self.position[1] - newgoalpos[1])
             speeds[0] = self.distance_control(diff, self.do)
         else:
             speeds[0] = self.distance_control(None, self.do, False)
-        if self.driving[1] and self.goals[1] is not None:
-            speeds[1] = self.heading_control(self.goals[1], self.do)
+        if self.driving[1] or self.goals[1] is not None:
+            if self.goals[1] is not None:
+                goal = self.goals[1]
+            else:
+                goal = 100
+            speeds[1] = self.heading_control(goal, self.do)
         else:
             speeds[1] = self.heading_control(None, self.do, False)
         
