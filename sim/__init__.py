@@ -159,8 +159,8 @@ class EV3BrickSim:
             fieldsur = scale_sur(field, fieldsize)
             
             # Put it all on the screen
+            pygame.draw.rect(self.win, (139, 69, 19), (fieldpos[0] - 7, fieldpos[1] - 7, fieldsize[0] + 14, fieldsize[1] + 14), 8, 1)
             self.win.blit(fieldsur, fieldpos)
-            pygame.draw.rect(self.win, (139, 69, 19), (*fieldpos, *fieldsize), 8, 1)
             
             # if use_mpos:
             self.win.blit(font.render(str(mpos), 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 10))
