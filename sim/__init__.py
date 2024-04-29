@@ -78,12 +78,13 @@ class EV3BrickSim:
         self.screen = Screen()  # type: Screen
         self.speaker = Speaker()  # type: Speaker
     
-    def simulate(self, function, drivebase):
+    def simulate(self, function, drivebase, path_plotter=False):
         r = True
         rawobjs = get_positions()['Objects']
         objs = [
             Obj(pygame.color.THECOLORS[i.strip('_box').lower()], rawobjs[i]) for i in rawobjs
         ]
+        path = [drivebase.position]
         font = pygame.font.SysFont(None, 16)
         audioicon = pygame.image.load('sim/ims/audio.png')
         field = pygame.Surface(get_positions()['Rects']['Board_size'][1])
@@ -91,26 +92,55 @@ class EV3BrickSim:
         time.reset()
         fr = 60
         time.set_fr(fr)
-        t = Thread(target=function, name='Simulated EV3 program', daemon=True)
+        t = Thread(target=function, name='Simulated EV3 program', daemon=True) # TODO: Make killable thread for path_plotter
         t.start()
         while r:
+            self.win.fill((255, 255, 255))
+            drivebase()
+            
+            # Field
+            field.fill((255, 255, 255))
+            ## set some params
+            fieldpos = (10, 10)
+            fieldsize = (200, 200)
+            _, is_hori, diff, smaller, scale = scale_sur(field, fieldsize, True) # Verbose used for mouse pos
+            
+            ## Get mouse relative to field
+            mpos = pygame.mouse.get_pos()
+            mpos = [mpos[0] - fieldpos[0], mpos[1] - fieldpos[1]]
+            if is_hori:
+                mpos[0] -= diff
+            else:
+                mpos[1] -= diff
+            # use_mpos = not any([mpos[0] < 0 or mpos[0] > smaller.get_width(), mpos[1] < 0 or mpos[1] > smaller.get_height()])
+            # if use_mpos
+            if pygame.mouse.get_pressed()[0] and path_plotter: # Only if you are pressing down the mouse AND have the path plotter enabled will this ever be True
+                drivebase.position = mpos
+            mpos[0] /= scale
+            mpos[1] /= scale
+            
+            keeponfield = lambda val, spot: min(max(val, 0), field.get_size()[spot])
+            mpos = [keeponfield(round(mpos[0], 1), 0), keeponfield(round(mpos[1], 1), 0)]
+            
+            # Do some event stuff here before continuing with other objects as this has some effects on some of the objects
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     r = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         r = False
-            self.win.fill((255, 255, 255))
-            drivebase()
+                    elif path_plotter:
+                        if event.key == pygame.K_r:
+                            path = [drivebase.position]
+                        elif event.key == pygame.K_i:
+                            path.append(drivebase.position)
             
-            # Field
-            field.fill((255, 255, 255))
-
+            # More field stuff
             ## Robot
             sze = (100, 100)
             robot = pygame.Surface(sze)
             robot.fill((255, 255, 255))
-            pygame.draw.rect(robot, 0, (0, 0, *sze), 8)
+            pygame.draw.rect(robot, 0, (0, 0, *sze), 15)
             pygame.draw.rect(robot, (255, 255, 255), (0, 0, *sze), 1)
             roboPic = pygame.font.Font(None, 100).render('<=', 1, 0)
             robot.blit(roboPic, ((sze[0] - roboPic.get_width())/2, (sze[1] - roboPic.get_height())/2))
@@ -121,24 +151,12 @@ class EV3BrickSim:
             for o in objs:
                 o.draw(field)
             
-            ## set some params
-            fieldpos = (10, 10)
-            fieldsize = (200, 200)
-            fieldsur, is_hori, diff, smaller, scale = scale_sur(field, fieldsize, True) # Verbose used for mouse pos
+            ## Put the path on the field
+            for i in path:
+                pygame.draw.circle(field, (10, 50, 255), i, 8)
             
-            ## Get mouse relative to field
-            mpos = pygame.mouse.get_pos()
-            mpos = [mpos[0] - fieldpos[0], mpos[1] - fieldpos[1]]
-            if is_hori:
-                mpos[0] -= diff
-            else:
-                mpos[1] -= diff
-            # use_mpos = not any([mpos[0] < 0 or mpos[0] > smaller.get_width(), mpos[1] < 0 or mpos[1] > smaller.get_height()])
-            
-            mpos[0] /= scale
-            mpos[1] /= scale
-            keeponfield = lambda val, spot: min(max(val, 0), field.get_size()[spot])
-            mpos = [keeponfield(round(mpos[0], 1), 0), keeponfield(round(mpos[1], 1), 0)]
+            ## Re-render the field with these new objects on it
+            fieldsur = scale_sur(field, fieldsize)
             
             # Put it all on the screen
             self.win.blit(fieldsur, fieldpos)
@@ -148,6 +166,18 @@ class EV3BrickSim:
             self.win.blit(font.render(str(mpos), 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 10))
             
             self.win.blit(self.generate_face(), (fieldsize[0]+44, fieldpos[1]))
+            
+            if path_plotter:
+                self.win.blit(font.render("Path plotter enabled!", 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 30))
+                paras = [
+                    "R: Restart (empty path)",
+                    "I: Insert current position to path",
+                    "",
+                    "Current path:",
+                    "[" + ", ".join([f"({str(round(i[0], 2))}, {str(round(i[1], 2))})" for i in path]) + "]"
+                ]
+                for i in range(len(paras)):
+                    self.win.blit(font.render(paras[i], 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 45 + 10 * i))
             
             if self.speaker.busy:
                 self.win.blit(audioicon, (fieldpos[0]+fieldsize[0]+10, fieldpos[1]))
