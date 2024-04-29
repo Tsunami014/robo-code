@@ -145,7 +145,7 @@ class EV3BrickSim:
             roboPic = pygame.font.Font(None, 100).render('<=', 1, 0)
             robot.blit(roboPic, ((sze[0] - roboPic.get_width())/2, (sze[1] - roboPic.get_height())/2))
             roted = pygame.transform.rotate(robot, -drivebase.rotation-90)
-            field.blit(roted, drivebase.position)
+            field.blit(roted, (drivebase.position[0] - (roted.get_width() / 2), drivebase.position[1] - (roted.get_height() / 2)))
             
             ## Objs
             for o in objs:
