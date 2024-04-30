@@ -160,12 +160,22 @@ class EV3BrickSim:
             
             self.win.blit(self.generate_face(), (fieldsize[0]+44, fieldpos[1])) # TODO: In path plotter do not list the key presses until start simulating
             
-            self.win.blit(
-                font.render(
-                            str(mpos) + "  " + str((round(drivebase.position[0], 2), round(drivebase.position[1], 2), round(drivebase.rotation, 2))), 1, 0
-                            ), (fieldpos[0], fieldpos[1] + fieldsize[1] + 10))
+            round_list = lambda l: [i if not hasattr(i, '__round__') else round(i, 2) for i in l]
             
-            self.win.blit(font.render(f"Path plotter {'en' if path_plotter else 'dis'}abled, toggle with 'P'", 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 30))
+            self.win.blit(
+                font.render(str(mpos) + "  " + str((*round_list(drivebase.position), round(drivebase.rotation, 2))), 1, 0), 
+                (fieldpos[0], fieldpos[1] + fieldsize[1] + 10)
+            )
+
+            self.win.blit(
+                font.render(f"Goal: {round_list(drivebase.goals)}, driving: {drivebase.driving}",
+                            1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 20))
+
+            self.win.blit(
+                font.render(f"Accumulated distance and rotation: {(round(drivebase.distance(), 2), round(drivebase.angle(), 2))}",
+                            1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 30))
+            
+            self.win.blit(font.render(f"Path plotter {'en' if path_plotter else 'dis'}abled, toggle with 'P'", 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 50))
             if path_plotter:
                 paras = [
                     "R: Restart (empty path)",
@@ -179,7 +189,7 @@ class EV3BrickSim:
                     "[" + ", ".join([f"({str(round(i[0], 2))}, {str(round(i[1], 2))})" for i in path]) + "]"
                 ]
                 for i in range(len(paras)):
-                    self.win.blit(font.render(paras[i], 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 45 + 10 * i))
+                    self.win.blit(font.render(paras[i], 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 65 + 10 * i))
             
             if self.speaker.busy:
                 self.win.blit(audioicon, (fieldpos[0]+fieldsize[0]+10, fieldpos[1]))
@@ -251,7 +261,7 @@ class DriveBaseSim:
         # The current limits: straight_speed (mm/s), straight_acceleration (tuple[accel, deaccel], mm/s²), turn_rate (deg/s), turn_acceleration (tuple[accel, deaccel], deg/s²)
         # self.limits is defined when we run self.settings
         self.limits = [None, None, None, None]
-        self.settings(100, 10, 90, 10)
+        self.settings(1000, 100, 110, 20)
     
     def straight(
         self, distance: Number, then: Stop = Stop.HOLD, wait: bool = True
