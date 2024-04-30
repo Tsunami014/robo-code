@@ -14,7 +14,7 @@ from dat import get_positions
 from typing import Optional, overload, Awaitable
 MaybeAwaitable = None | Awaitable[None]
 
-from kthread import KThread
+from kthread import KThread, DoNotPrintException
 import math
 
 def scale_sur(sur, size, verbose=False) -> pygame.Surface | tuple[pygame.Surface, bool, float, pygame.Surface, float]:
@@ -78,13 +78,16 @@ class EV3BrickSim:
         self.screen = Screen()  # type: Screen
         self.speaker = Speaker()  # type: Speaker
     
-    def simulate(self, function, drivebase, path_plotter=False):
+    def simulate(self, function, drivebase, path_plotter=False, start_path=None): # Path plotter can be changed mid-sim, this is just the starting value
         r = True
         rawobjs = get_positions()['Objects']
         objs = [
             Obj(pygame.color.THECOLORS[i.strip('_box').lower()], rawobjs[i]) for i in rawobjs
         ]
-        path = [drivebase.position]
+        if start_path is None or start_path == []:
+            path = [drivebase.position]
+        else:
+            path = start_path
         font = pygame.font.SysFont(None, 16)
         audioicon = pygame.image.load('sim/ims/audio.png')
         field = pygame.Surface(get_positions()['Rects']['Board_size'][1])
@@ -92,9 +95,13 @@ class EV3BrickSim:
         time.reset()
         fr = 60
         time.set_fr(fr)
-        t = KThread(target=function, name='Simulated EV3 program', daemon=True) # TODO: Make killable thread for path_plotter
+        t = None
+        def start_thread():
+            newt = KThread(target=function, name='Simulated EV3 program', daemon=True)
+            newt.start()
+            return newt
         if not path_plotter:
-            t.start()
+            t = start_thread()
         while r:
             self.win.fill((255, 255, 255))
             drivebase()
@@ -130,6 +137,15 @@ class EV3BrickSim:
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         r = False
+                    elif event.key == pygame.K_p:
+                        path_plotter = not path_plotter
+                        if path_plotter:
+                            t.raise_exc(DoNotPrintException)
+                            drivebase.stop()
+                        else:
+                            drivebase.position = path[0]
+                            drivebase.rotation = 90
+                            t = start_thread()
                     elif path_plotter:
                         if event.key == pygame.K_r:
                             path = [drivebase.position]
@@ -155,8 +171,9 @@ class EV3BrickSim:
                 o.draw(field)
             
             ## Put the path on the field
-            for i in path:
-                pygame.draw.circle(field, (10, 50, 255), i, 8)
+            if path_plotter:
+                for i in path:
+                    pygame.draw.circle(field, (10, 50, 255), i, 8)
             
             ## Re-render the field with these new objects on it
             fieldsur = scale_sur(field, fieldsize)
@@ -170,8 +187,8 @@ class EV3BrickSim:
             
             self.win.blit(self.generate_face(), (fieldsize[0]+44, fieldpos[1])) # TODO: In path plotter do not list the key presses until start simulating
             
+            self.win.blit(font.render(f"Path plotter {'en' if path_plotter else 'dis'}abled, toggle with 'P'", 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 30))
             if path_plotter:
-                self.win.blit(font.render("Path plotter enabled!", 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 30))
                 paras = [
                     "R: Restart (empty path)",
                     "I: Insert current position to path",

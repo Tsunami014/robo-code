@@ -17,13 +17,6 @@
             "request": "launch",
             "program": "test.py",
             "console": "integratedTerminal"
-        },
-        {
-            "name": "Plot path",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "path_plotter.py",
-            "console": "integratedTerminal"
         }
     ]
 }
