@@ -6,10 +6,10 @@ This uses micropython for the ev3 bricks!
  - Positions of the objects are stored in `dat/positions.json` :)
 ## Installation
 ### Must install
-`pip install pybricks numpy`
+`pip install pybricks`
 
 ### For the sim
-`pip install pygame pyttsx3`
+`pip install pygame pyttsx3 numpy`
 
 And also `pip install simpleaudio`, but if that doesn't work then you won't be able to have the sounds in the sim, but that's OK
 
