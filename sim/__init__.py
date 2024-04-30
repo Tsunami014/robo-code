@@ -159,10 +159,12 @@ class EV3BrickSim:
             pygame.draw.rect(self.win, (139, 69, 19), (fieldpos[0] - 7, fieldpos[1] - 7, fieldsize[0] + 14, fieldsize[1] + 14), 8, 1)
             self.win.blit(fieldsur, fieldpos)
             
-            # if use_mpos:
-            self.win.blit(font.render(str(mpos), 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 10))
-            
             self.win.blit(self.generate_face(), (fieldsize[0]+44, fieldpos[1])) # TODO: In path plotter do not list the key presses until start simulating
+            
+            self.win.blit(
+                font.render(
+                            str(mpos) + "  " + str((round(drivebase.position[0], 2), round(drivebase.position[1], 2), round(drivebase.rotation, 2))), 1, 0
+                            ), (fieldpos[0], fieldpos[1] + fieldsize[1] + 10))
             
             self.win.blit(font.render(f"Path plotter {'en' if path_plotter else 'dis'}abled, toggle with 'P'", 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 30))
             if path_plotter:
