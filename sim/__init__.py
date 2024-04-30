@@ -71,6 +71,8 @@ class EV3BrickSim:
             t = start_thread()
         while r:
             self.win.fill((255, 255, 255))
+            if not t.is_alive():
+                drivebase.stop()
             drivebase()
             
             # Field
