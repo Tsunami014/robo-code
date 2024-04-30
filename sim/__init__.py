@@ -54,6 +54,7 @@ class EV3BrickSim:
             path = dat.load_path()
         else:
             path = [drivebase.position]
+        drivebase.position = path[0]
         font = pygame.font.SysFont(None, 16)
         audioicon = pygame.image.load('sim/ims/audio.png')
         field = pygame.Surface(dat.get_positions()['Rects']['Board_size'][1])
