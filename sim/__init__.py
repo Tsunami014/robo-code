@@ -109,7 +109,8 @@ class EV3BrickSim:
                     elif event.key == pygame.K_p:
                         path_plotter = not path_plotter
                         if path_plotter:
-                            t.raise_exc(DoNotPrintException)
+                            if t.is_alive(): # An error occurs when you attempt to raise an exception in a thread that has already stopped
+                                t.raise_exc(DoNotPrintException)
                             drivebase.stop()
                         else:
                             drivebase.position = path[0]
