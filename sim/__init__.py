@@ -9,7 +9,9 @@ from sim.motors import Motor, Control, Number, Stop
 import sim.time as time
 from sim.objects import Obj
 
-from dat import get_positions
+import dat
+from json import load, dump
+from tkinter.filedialog import asksaveasfile, askopenfile
 
 from typing import Optional, overload, Awaitable
 MaybeAwaitable = None | Awaitable[None]
@@ -78,19 +80,19 @@ class EV3BrickSim:
         self.screen = Screen()  # type: Screen
         self.speaker = Speaker()  # type: Speaker
     
-    def simulate(self, function, drivebase, path_plotter=False, start_path=None): # Path plotter can be changed mid-sim, this is just the starting value
+    def simulate(self, function, drivebase, path_plotter=False): # Path plotter can be changed mid-sim, this is just the starting value
         r = True
-        rawobjs = get_positions()['Objects']
+        rawobjs = dat.get_positions()['Objects']
         objs = [
             Obj(pygame.color.THECOLORS[i.strip('_box').lower()], rawobjs[i]) for i in rawobjs
         ]
-        if start_path is None or start_path == []:
-            path = [drivebase.position]
+        if dat.path_exists():
+            path = dat.load_path()
         else:
-            path = start_path
+            path = [drivebase.position]
         font = pygame.font.SysFont(None, 16)
         audioicon = pygame.image.load('sim/ims/audio.png')
-        field = pygame.Surface(get_positions()['Rects']['Board_size'][1])
+        field = pygame.Surface(dat.get_positions()['Rects']['Board_size'][1])
         clock = pygame.time.Clock()
         time.reset()
         fr = 60
@@ -153,6 +155,16 @@ class EV3BrickSim:
                             path.append(drivebase.position)
                         elif event.key == pygame.K_d and len(path) > 1:
                             drivebase.position = path.pop()
+                        elif event.key == pygame.K_s:
+                            dat.save_path(path)
+                        elif event.key == pygame.K_a:
+                            f = asksaveasfile(mode='w+', defaultextension='.json', filetypes=[('JSON files', '*.json')])
+                            dump(path, f)
+                            f.close()
+                        elif event.key == pygame.K_o:
+                            f = askopenfile(mode='r', filetypes=[('JSON files', '*.json')])
+                            path = load(f)
+                            f.close()
             
             # More field stuff
             ## Robot
@@ -192,7 +204,10 @@ class EV3BrickSim:
                 paras = [
                     "R: Restart (empty path)",
                     "I: Insert current position to path",
-                    "D: Delete last position on path (and go to it)"
+                    "D: Delete last position on path (and go to it)",
+                    "S: Save path to what will be used in the program",
+                    "A: Save path to a separate file (save as)",
+                    "O: Open a path from a file",
                     "",
                     "Current path:",
                     "[" + ", ".join([f"({str(round(i[0], 2))}, {str(round(i[1], 2))})" for i in path]) + "]"

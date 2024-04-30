@@ -1,12 +1,14 @@
-# Do not commit python cache files!
+# Do not commit python cache files
 __pycache__/
 *.pyc
 .venv/
-# Do not commit svg files
+# Do not commit svg files (the images are converted to PNG anyways, they're just if I want to edit them later)
 *.svg
-# DO NOT COMMIT PERSONAL CODE FOR THE ASSESMENT TASK (or whoever's code they used too)
+# DO NOT COMMIT PERSONAL CODE
 main.py
 test.py
+pseudocode/*
+dat/path.json
+# But do commit the examples
 !examples/main.py
 !examples/test.py
-pseudocode/*
