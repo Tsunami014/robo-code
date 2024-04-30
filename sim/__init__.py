@@ -17,48 +17,12 @@ from typing import Optional, overload, Awaitable
 MaybeAwaitable = None | Awaitable[None]
 
 from kthread import KThread, DoNotPrintException
-import math
 
-def scale_sur(sur, size, verbose=False) -> pygame.Surface | tuple[pygame.Surface, bool, float, pygame.Surface, float]:
-    scaled = pygame.Surface(size)
-    scaled.fill(0)
-    scale = min([size[0] / sur.get_width(), size[1] / sur.get_height()])
-    newsur = pygame.transform.scale(sur, (int(sur.get_width() * scale), int(sur.get_height() * scale)))
-    if newsur.get_width() < size[0]:
-        diff = (size[0] - newsur.get_width()) / 2
-        scaled.blit(newsur, (diff, 0))
-    else:
-        diff = (size[1] - newsur.get_height()) / 2
-        scaled.blit(newsur, (0, diff))
-    if verbose:
-        return scaled, newsur.get_width() < size[0], diff, newsur, scale
-    return scaled
-
-def rotate(origin, point, angle): # Thanks, https://stackoverflow.com/questions/34372480/rotate-point-about-another-point-in-degrees-python!
-    """
-    Rotate a point clockwise by a given angle around a given origin.
-
-    The angle should be given in degrees.
-    """
-    angle = math.radians(-angle)
-    ox, oy = origin
-    px, py = point
-    
-    cos = math.cos(angle)
-    sin = math.sin(angle)
-    
-    ydiff = (py - oy)
-    xdiff = (px - ox)
-
-    qx = ox + cos * xdiff - sin * ydiff
-    qy = oy + sin * xdiff + cos * ydiff
-    return qx, qy
-
-def fixangle(angle):
-    angle = angle % 360
-    if angle > 180:
-        angle = (-180) + (angle - 180)
-    return angle
+from sim.mathMethods import (
+    scale_sur,
+    rotate,
+    fixangle
+)
 
 class EV3BrickSim:
     """
