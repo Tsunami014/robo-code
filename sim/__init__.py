@@ -148,9 +148,8 @@ class EV3BrickSim:
                 o.draw(field)
             
             ## Put the path on the field
-            if path_plotter:
-                for i in path:
-                    pygame.draw.circle(field, (10, 50, 255), i, 8)
+            for i in path:
+                pygame.draw.circle(field, (10, 50, 255), i, 8)
             
             ## Re-render the field with these new objects on it
             fieldsur = scale_sur(field, fieldsize)
