@@ -14,7 +14,7 @@ from dat import get_positions
 from typing import Optional, overload, Awaitable
 MaybeAwaitable = None | Awaitable[None]
 
-from threading import Thread
+from kthread import KThread
 import math
 
 def scale_sur(sur, size, verbose=False) -> pygame.Surface | tuple[pygame.Surface, bool, float, pygame.Surface, float]:
@@ -92,8 +92,9 @@ class EV3BrickSim:
         time.reset()
         fr = 60
         time.set_fr(fr)
-        t = Thread(target=function, name='Simulated EV3 program', daemon=True) # TODO: Make killable thread for path_plotter
-        t.start()
+        t = KThread(target=function, name='Simulated EV3 program', daemon=True) # TODO: Make killable thread for path_plotter
+        if not path_plotter:
+            t.start()
         while r:
             self.win.fill((255, 255, 255))
             drivebase()
