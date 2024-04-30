@@ -36,14 +36,14 @@ def rotate(origin, point, angle): # Thanks, https://stackoverflow.com/questions/
     qy = oy + sin * xdiff + cos * ydiff
     return qx, qy
 
-def toPolar(origin, point): # Thanks to https://stackoverflow.com/questions/20924085/python-conversion-between-coordinates
-    x, y = point[0] - origin[0], point[1] - origin[1]
-    rho = np.sqrt(x**2 + y**2)
-    phi = np.arctan2(y, x)
-    return (rho, phi)
-
 def fixangle(angle):
     angle = angle % 360
     if angle > 180:
         angle = (-180) + (angle - 180)
     return angle
+
+def toPolar(origin, point): # Thanks to https://stackoverflow.com/questions/20924085/python-conversion-between-coordinates
+    x, y = point[0] - origin[0], point[1] - origin[1]
+    rho = np.sqrt(x**2 + y**2)
+    phi = fixangle(180 - math.degrees(np.arctan2(y, x)))
+    return (rho, phi) # rho: distance, phi: angle
