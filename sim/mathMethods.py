@@ -36,7 +36,7 @@ def rotate(origin, point, angle): # Thanks, https://stackoverflow.com/questions/
     qy = oy + sin * xdiff + cos * ydiff
     return qx, qy
 
-def rotation_to(origin, point): # Thanks to https://stackoverflow.com/questions/20924085/python-conversion-between-coordinates
+def toPolar(origin, point): # Thanks to https://stackoverflow.com/questions/20924085/python-conversion-between-coordinates
     x, y = point[0] - origin[0], point[1] - origin[1]
     rho = np.sqrt(x**2 + y**2)
     phi = np.arctan2(y, x)
