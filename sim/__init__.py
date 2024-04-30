@@ -134,7 +134,7 @@ class EV3BrickSim:
                             path = [drivebase.position]
                         elif event.key == pygame.K_i:
                             path.append(drivebase.position)
-                        elif event.key == pygame.K_d:
+                        elif event.key == pygame.K_d and len(path) > 1:
                             drivebase.position = path.pop()
             
             # More field stuff
