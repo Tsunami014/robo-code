@@ -159,7 +159,7 @@ class EV3BrickSim:
             for o in objs:
                 o.update(field, [roted_rect])
             
-            newobj.update(field, [roted_rect], True)
+            # newobj.update(field, [roted_rect], True)
             
             ## Put the path on the field
             for i in path:

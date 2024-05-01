@@ -1,5 +1,6 @@
 import pygame.draw
 import math
+from sim.mathMethods import rotate, toPolar
 
 def collideLineLine(l1_p1, l1_p2, l2_p1, l2_p2): # Thanks to https://stackoverflow.com/questions/64095396/detecting-collisions-between-polygons-and-rectangles-in-pygame !
     # normalized direction of the lines and start of the lines
@@ -68,16 +69,45 @@ class Obj:
         self.points = [(i[0]+x, i[1]+y) for i in self.points]
         self.centre = self.find_centre()
     
+    def rotate(self, angle):
+        self.points = [rotate(self.centre, i, angle) for i in self.points]
+        self.centre = self.find_centre() # Though *should* be the same, but rounding errors occur so...
+    
     def collision(self, points, win=None):
         points_centre = self.find_centre(points)
         if points == [] or self.points == []:
             return False
-        closest_point_line = closest_line(self.centre, points)
-        closest_this_line = closest_line(points_centre, self.points)
-        edgecollide = collideLineLine(*closest_point_line, *closest_this_line)
-        if edgecollide:
-            pass
-            # intersection = line_intersection(closest_point_line, closest_this_line)
+        edgecollide, othercollision = True, True
+        intersection = (0, 0)
+        last = (-1, -1)
+        attempts = 0
+        # TODO: Figure out why pushing the blocks on the side basically warps them to the edge of the robot
+        #if True:
+        while (edgecollide or othercollision) and attempts < 100: # Do not block anything
+            closest_point_line = closest_line(self.centre, points)
+            closest_this_line = closest_line(points_centre, self.points)
+            edgecollide = collideLineLine(*closest_point_line, *closest_this_line)
+            othercollision = any(
+                collideLineLine(self.points[i], self.points[len(self.points) // 2 + i], *closest_point_line) for i in range(len(self.points)//2)
+            ) or (abs(points_centre[0] - self.centre[0]) + abs(points_centre[1] - self.centre[1])) < min([
+                abs(points_centre[0] - i[0]) + abs(points_centre[1] - i[1]) for i in self.points
+            ])
+            current = None
+            if edgecollide:
+                intersection = line_intersection(closest_point_line, closest_this_line)
+                current = 2 if intersection[0] > self.centre[0] else 1
+                if current in last:
+                    current = 0
+            elif othercollision:
+                current = 0
+            if current is not None:
+                if current == 0:
+                    self.moveby(*rotate((0, 0), (1, 0), toPolar(self.centre, points_centre)[1]))
+                else:
+                    self.rotate(2 if current == 1 else -2)
+                last = (current, last[0])
+            attempts += 1
+                
         if win is not None:
             pygame.draw.line(win, 0, self.find_centre(closest_point_line), self.find_centre(closest_this_line), 8)
             prev = points[0]
@@ -85,11 +115,7 @@ class Obj:
                 pygame.draw.line(win, self.colour, prev, i, 10)
                 prev = i
             pygame.draw.line(win, self.colour, self.points[-1], self.points[0], 10)
-        return edgecollide or any(
-            collideLineLine(self.points[i], self.points[len(self.points) // 2 + i], *closest_point_line) for i in range(len(self.points)//2)
-        ) or (abs(points_centre[0] - self.centre[0]) + abs(points_centre[1] - self.centre[1])) < min([
-            abs(points_centre[0] - i[0]) + abs(points_centre[1] - i[1]) for i in self.points
-        ])
+            pygame.draw.circle(win, self.colour, intersection, 10)
     
     def update(self, win, objects, draw=False):
         if len(self.points) < 2:
