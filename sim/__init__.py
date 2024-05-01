@@ -1,28 +1,31 @@
-import os
-os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
-import pygame
-pygame.init()
-
-from sim.ev3 import Battery, Buttons, Light, Screen
-from sim.speaker import Speaker
 from sim.motors import Motor, Control, Number, Stop
-import sim.time as time
-from sim.objects import Obj
 
-import dat
-from json import load, dump
-from tkinter.filedialog import asksaveasfile, askopenfile
+try: # DO NOT IMPORT THINGS if running on the robot
+    import os
+    os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+    import pygame
+    pygame.init()
 
-from typing import Optional, overload, Awaitable
-MaybeAwaitable = None | Awaitable[None]
+    from sim.ev3 import Battery, Buttons, Light, Screen
+    from sim.speaker import Speaker
+    import sim.time as time
+    from sim.objects import Obj
 
-from kthread import KThread, DoNotPrintException
+    import dat
+    from json import load, dump
+    from tkinter.filedialog import asksaveasfile, askopenfile
 
-from sim.mathMethods import (
-    scale_sur,
-    rotate,
-    fixangle
-)
+    from kthread import KThread, DoNotPrintException
+
+    from typing import overload
+
+    from sim.mathMethods import (
+        scale_sur,
+        rotate,
+        fixangle
+    )
+except:
+    overload = lambda *args: None
 
 class EV3BrickSim:
     """
@@ -175,7 +178,7 @@ class EV3BrickSim:
                             1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 20))
 
             self.win.blit(
-                font.render("Accumulated distance and rotation: " + str(round(drivebase.distance(), 2), round(drivebase.angle(), 2)),
+                font.render("Accumulated distance and rotation: " + str((round(drivebase.distance(), 2), round(drivebase.angle(), 2))),
                             1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 30))
             
             self.win.blit(font.render("Path plotter " + ('en' if path_plotter else 'dis') + "abled, toggle with 'P'", 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 50))
@@ -268,7 +271,7 @@ class DriveBaseSim:
     
     def straight(
         self, distance: Number, then: Stop = Stop.HOLD, wait: bool = True
-    ) -> MaybeAwaitable:
+    ):
         """straight(distance, then=Stop.HOLD, wait=True)
 
         Drives straight for a given distance and then stops.
@@ -292,7 +295,7 @@ class DriveBaseSim:
 
     def turn(
         self, angle: Number, then: Stop = Stop.HOLD, wait: bool = True
-    ) -> MaybeAwaitable:
+    ):
         """turn(angle, then=Stop.HOLD, wait=True)
 
         Turns in place by a given angle and then stops.
@@ -316,7 +319,7 @@ class DriveBaseSim:
 
     def curve(
         self, radius: Number, angle: Number, then: Stop = Stop.HOLD, wait: bool = True
-    ) -> MaybeAwaitable:
+    ):
         """curve(radius, angle, then=Stop.HOLD, wait=True)
 
         Drives an arc along a circle of a given radius, by a given angle.
@@ -376,10 +379,10 @@ class DriveBaseSim:
     @overload
     def settings(
         self,
-        straight_speed: Optional[Number] = None,
-        straight_acceleration: Optional[Number] = None,
-        turn_rate: Optional[Number] = None,
-        turn_acceleration: Optional[Number] = None,
+        straight_speed: Number = None,
+        straight_acceleration: Number = None,
+        turn_rate: Number = None,
+        turn_acceleration: Number = None,
     ) -> None: ...
 
     @overload

@@ -3,10 +3,11 @@ from pybricks.media.ev3dev import Font, Image, ImageFile
 from typing import Union
 from enum import Enum
 
-from sim.converts import ConvertColor, ConvertFont, ConvertImage, ConvertImageFile
+if __name__ != 'sim': # DO NOT IMPORT THINGS if running on the robot
+    from sim.converts import ConvertColor, ConvertFont, ConvertImage, ConvertImageFile
 
-from pygame.key import get_pressed
-import pygame.locals as pgls
+    from pygame.key import get_pressed
+    import pygame.locals as pgls
 
 class Battery:
     """

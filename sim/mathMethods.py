@@ -1,4 +1,8 @@
-import math, pygame
+import math
+try: # Make sure if it's running the actual thing it is not to import what it does not have & need
+    import pygame
+except:
+    pass
 
 def scale_sur(sur, size, verbose=False) -> pygame.Surface | tuple[pygame.Surface, bool, float, pygame.Surface, float]:
     scaled = pygame.Surface(size)

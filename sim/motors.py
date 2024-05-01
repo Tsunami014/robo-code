@@ -2,10 +2,15 @@ from pybricks.parameters import Direction, Port
 
 import sim.time as time
 
-from typing import Union, Optional, Tuple, overload
-from enum import Enum
+try: # DO NOT IMPORT THINGS if running on the robot
+    from typing import overload
+    from enum import Enum
+except:
+    overload = lambda *args: None
+    class Enum:
+        pass
 
-Number = Union[int, float]
+Number = int | float
 
 def _clamp(value, limits):
     lower, upper = limits
@@ -51,13 +56,7 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
     # But only do that when I go for speed PIDs instead of position PIDs
     """Class to interact with PID controller and settings."""
 
-    scale: int
-
-    """
-    Scaling factor between the controlled integer variable
-    and the physical output. For example, for a single
-    motor this is the number of encoder pulses per degree of rotation.
-    """
+    # scale value not here, shouldn't be a problem for most code
     
     def __init__(self) -> None:
         self.current = 0
@@ -194,18 +193,18 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
     @overload
     def limits(
         self,
-        speed: Optional[Number] = None,
-        acceleration: Optional[Number] = None,
-        torque: Optional[Number] = None,
+        speed: Number = None,
+        acceleration: Number = None,
+        torque: Number = None,
     ) -> None: ...
 
     @overload
-    def limits(self) -> Tuple[int, int, int]: ...
+    def limits(self) -> tuple[int, int, int]: ...
 
     def limits(self, *args):
         """
         limits(speed, acceleration, torque)
-        limits() -> Tuple[int, int, int]
+        limits() -> tuple[int, int, int]
 
         Configures the maximum speed, acceleration, and torque.
 
@@ -237,19 +236,19 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
     @overload
     def pid(
         self,
-        kp: Optional[Number] = None,
-        ki: Optional[Number] = None,
-        kd: Optional[Number] = None,
-        integral_deadzone: Optional[Number] = None,
-        integral_rate: Optional[Number] = None,
+        kp: Number = None,
+        ki: Number = None,
+        kd: Number = None,
+        integral_deadzone: Number = None,
+        integral_rate: Number = None,
     ) -> None: ...
 
     @overload
-    def pid(self) -> Tuple[int, int, int, int, int]: ...
+    def pid(self) -> tuple[int, int, int, int, int]: ...
 
     def pid(self, *args):
         """pid(kp, ki, kd, integral_deadzone, integral_rate)
-        pid() -> Tuple[int, int, int, int, int]
+        pid() -> tuple[int, int, int, int, int]
 
         Gets or sets the PID values for position and speed control.
 
@@ -279,15 +278,15 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
 
     @overload
     def target_tolerances(
-        self, speed: Optional[Number] = None, position: Optional[Number] = None
+        self, speed: Number = None, position: Number = None
     ) -> None: ...
 
     @overload
-    def target_tolerances(self) -> Tuple[int, int]: ...
+    def target_tolerances(self) -> tuple[int, int]: ...
 
     def target_tolerances(self, *args):
         """target_tolerances(speed, position)
-        target_tolerances() -> Tuple[int, int]
+        target_tolerances() -> tuple[int, int]
 
         Gets or sets the tolerances that say when a maneuver is done.
 
@@ -308,15 +307,15 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
 
     @overload
     def stall_tolerances(
-        self, speed: Optional[Number] = None, time: Optional[Number] = None
+        self, speed: Number = None, time: Number = None
     ) -> None: ...
 
     @overload
-    def stall_tolerances(self) -> Tuple[int, int]: ...
+    def stall_tolerances(self) -> tuple[int, int]: ...
 
     def stall_tolerances(self, *args):
         """stall_tolerances(speed, time)
-        stall_tolerances() -> Tuple[int, int]
+        stall_tolerances() -> tuple[int, int]
 
         Gets or sets stalling tolerances.
 
@@ -350,7 +349,7 @@ class Motor:
         When you specify a gear train, all motor commands and settings are automatically adjusted to account for the resulting gear ratio. The motor direction remains unchanged by this.
     """
 
-    def __init__(self, port: Port, positive_direction: Direction = Direction.CLOCKWISE, gears: Union[list[int], list[list[int]]] = None):
+    def __init__(self, port: Port, positive_direction: Direction = Direction.CLOCKWISE, gears: list[int] | list[list[int]] = None):
         if port == Port.S1 or port == Port.S2 or port == port.S3 or port == port.S4:
             raise ValueError("Motors must use Port A, B, C, or D.")
         self.control = Control()  # type: Control
