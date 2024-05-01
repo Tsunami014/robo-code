@@ -63,6 +63,7 @@ class EV3BrickSim:
         field = pygame.Surface(dat.get_positions()['Rects']['Board_size'][1])
         clock = pygame.time.Clock()
         time.reset()
+        newobj = Obj('blue', [(100, 100), (200, 100), (250, 200), (150, 200)])
         fr = 60
         time.set_fr(fr)
         t = None
@@ -150,9 +151,15 @@ class EV3BrickSim:
             roted = pygame.transform.rotate(robot, -drivebase.rotation-90)
             field.blit(roted, (drivebase.position[0] - (roted.get_width() / 2), drivebase.position[1] - (roted.get_height() / 2)))
             
+            pos = [drivebase.position[0] - (sze[0] / 2), drivebase.position[1] - (sze[1] / 2)]
+            rec = (pos, (pos[0] + sze[0], pos[1]), (pos[0] + sze[0], pos[1] + sze[1]), (pos[0], pos[1] + sze[1]))
+            roted_rect = [rotate(drivebase.position, i, -drivebase.rotation) for i in rec]
+            
             ## Objs
             for o in objs:
                 o.draw(field)
+            
+            #newobj.draw(field, roted_rect)
             
             ## Put the path on the field
             for i in path:
@@ -191,6 +198,7 @@ class EV3BrickSim:
                     "S: Save path to what will be used in the program",
                     "A: Save path to a separate file (save as)",
                     "O: Open a path from a file",
+                    str(newobj.is_in_rect(roted_rect)),
                     "",
                     "Current path:",
                     "[" + ", ".join(["(" + str(round(i[0], 2)) + ", " + str(round(i[1], 2)) + ")" for i in path]) + "]"
