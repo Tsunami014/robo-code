@@ -1,13 +1,16 @@
 from pybricks.parameters import Color
 from pybricks.media.ev3dev import Font, Image, ImageFile
-from typing import Union
-from enum import Enum
 
-if __name__ != 'sim': # DO NOT IMPORT THINGS if running on the robot
+try: # DO NOT IMPORT THINGS if running on the robot
+    from enum import Enum
+    
     from sim.converts import ConvertColor, ConvertFont, ConvertImage, ConvertImageFile
 
     from pygame.key import get_pressed
     import pygame.locals as pgls
+except:
+    class Enum:
+        pass
 
 class Battery:
     """
@@ -185,7 +188,7 @@ class Screen:
         """
         self.font = ConvertFont(font)
 
-    def load_image(self, source: Union[str, Image, ImageFile]):
+    def load_image(self, source: str | Image | ImageFile):
         """
         Clears this image, then draws the source image centered in the screen.
 
@@ -198,7 +201,7 @@ class Screen:
         else:
             pass # TODO: When it's an Image
 
-    def draw_image(self, x: int, y: int, source: Union[str, Image, ImageFile], transparent: Color = None):
+    def draw_image(self, x: int, y: int, source: str | Image | ImageFile, transparent: Color = None):
         """
         Draws the source image on the screen.
 
