@@ -1,3 +1,4 @@
+from sim.mathMethods import toPolar
 from sim.motors import Motor, Control, Number, Stop
 
 try: # DO NOT IMPORT THINGS if running on the robot
@@ -58,12 +59,12 @@ class EV3BrickSim:
         else:
             path = [drivebase.position]
         drivebase.position = path[0]
+        prev_position = [drivebase.position, drivebase.position]
         font = pygame.font.SysFont(None, 16)
         audioicon = pygame.image.load('sim/ims/audio.png')
         field = pygame.Surface(dat.get_positions()['Rects']['Board_size'][1])
         clock = pygame.time.Clock()
         time.reset()
-        newobj = Obj('blue', [(100, 100), (200, 100), (250, 200), (150, 200)])
         fr = 60
         time.set_fr(fr)
         t = None
@@ -157,9 +158,7 @@ class EV3BrickSim:
             
             ## Objs
             for o in objs:
-                o.update(field, [roted_rect])
-            
-            # newobj.update(field, [roted_rect], True)
+                o.update(field, [roted_rect], -toPolar(prev_position[1], drivebase.position)[1]+90)
             
             ## Put the path on the field
             for i in path:
@@ -212,6 +211,9 @@ class EV3BrickSim:
             pygame.display.update()
             clock.tick(fr)
             time.tick()
+            if prev_position[0] != drivebase.position:
+                prev_position[1] = prev_position[0]
+                prev_position[0] = drivebase.position
     
     def generate_face(self):
         whole = pygame.Surface((200, 400))
