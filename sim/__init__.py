@@ -166,9 +166,19 @@ class EV3BrickSim:
             rec = (pos, (pos[0] + sze[0], pos[1]), (pos[0] + sze[0], pos[1] + sze[1]), (pos[0], pos[1] + sze[1]))
             roted_rect = [rotate(drivebase.position, i, -drivebase.rotation) for i in rec]
             
+            def extend(points, dir):
+                return [(i[0], i[1] + dir//2) for i in points] + [(i[0], i[1] + dir//2) for i in points[::-1]]
+            
+            fork_one = extend([(pos[0], pos[1] + 20), (pos[0], pos[1] - 100)], -8)
+            roted_fone = [rotate(drivebase.position, i, -drivebase.rotation) for i in fork_one]
+            pygame.draw.line(field, 0, roted_fone[0], roted_fone[1], 8)
+            fork_two = extend([(pos[0] + sze[0], pos[1] + 20), (pos[0] + sze[0], pos[1] - 100)], 8)
+            roted_ftwo = [rotate(drivebase.position, i, -drivebase.rotation) for i in fork_two]
+            pygame.draw.line(field, 0, roted_ftwo[0], roted_ftwo[1], 8)
+            
             ## Objs
             for o in objs:
-                o.update(field, [roted_rect], -toPolar(prev_position[1], drivebase.position)[1]+90)
+                o.update(field, [roted_rect, roted_fone, roted_ftwo], -toPolar(prev_position[1], drivebase.position)[1]+90)
             
             ## Put the path on the field
             for i in path:
