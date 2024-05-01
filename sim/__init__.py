@@ -157,9 +157,9 @@ class EV3BrickSim:
             
             ## Objs
             for o in objs:
-                o.draw(field)
+                o.update(field, [roted_rect])
             
-            #newobj.draw(field, roted_rect)
+            newobj.update(field, [roted_rect], True)
             
             ## Put the path on the field
             for i in path:
@@ -198,7 +198,6 @@ class EV3BrickSim:
                     "S: Save path to what will be used in the program",
                     "A: Save path to a separate file (save as)",
                     "O: Open a path from a file",
-                    str(newobj.is_in_rect(roted_rect)),
                     "",
                     "Current path:",
                     "[" + ", ".join(["(" + str(round(i[0], 2)) + ", " + str(round(i[1], 2)) + ")" for i in path]) + "]"

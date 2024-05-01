@@ -68,7 +68,7 @@ class Obj:
         self.points = [(i[0]+x, i[1]+y) for i in self.points]
         self.centre = self.find_centre()
     
-    def is_in_rect(self, points, win=None):
+    def collision(self, points, win=None):
         points_centre = self.find_centre(points)
         if points == [] or self.points == []:
             return False
@@ -91,11 +91,11 @@ class Obj:
             abs(points_centre[0] - i[0]) + abs(points_centre[1] - i[1]) for i in self.points
         ])
     
-    def draw(self, win, points=[]):
+    def update(self, win, objects, draw=False):
         if len(self.points) < 2:
             return
-        if points != []:
-            self.is_in_rect(points, win)
+        for obj in objects:
+            self.collision(obj, None if not draw else win)
         prev = self.points[0]
         for i in self.points[1:]:
             pygame.draw.line(win, self.colour, prev, i, 10)
