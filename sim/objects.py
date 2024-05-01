@@ -6,6 +6,11 @@ class Obj:
     def __init__(self, colour, points):
         self.colour = colour
         self.points = points
+        self.orig_points = points.copy()
+        self.centre = self.find_centre()
+    
+    def reset(self):
+        self.points = self.orig_points.copy()
         self.centre = self.find_centre()
     
     def find_centre(self, points=None):

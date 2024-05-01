@@ -122,9 +122,16 @@ class EV3BrickSim:
                             drivebase.rotation = 90
                             drivebase.reset()
                             t = start_thread()
+                        for i in objs: 
+                            i.reset()
                     elif path_plotter:
                         if event.key == pygame.K_r:
                             path = [drivebase.position]
+                            for i in objs: 
+                                i.reset()
+                        elif event.key == pygame.K_b:
+                            for i in objs: 
+                                i.reset()
                         elif event.key == pygame.K_i:
                             path.append(drivebase.position)
                         elif event.key == pygame.K_d and len(path) > 1:
@@ -139,6 +146,9 @@ class EV3BrickSim:
                             f = askopenfile(mode='r', filetypes=[('JSON files', '*.json')])
                             path = load(f)
                             f.close()
+                            drivebase.position = path[0]
+                            for i in objs: 
+                                i.reset()
             
             # More field stuff
             ## Robot
@@ -192,6 +202,7 @@ class EV3BrickSim:
             if path_plotter:
                 paras = [
                     "R: Restart (empty path)",
+                    "B: Reset all objects to their original positions",
                     "I: Insert current position to path",
                     "D: Delete last position on path (and go to it)",
                     "S: Save path to what will be used in the program",
