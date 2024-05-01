@@ -60,6 +60,7 @@ class EV3BrickSim:
             path = [drivebase.position]
         drivebase.position = path[0]
         prev_position = [drivebase.position, drivebase.position]
+        prev_rotation = [drivebase.rotation, drivebase.rotation]
         font = pygame.font.SysFont(None, 16)
         audioicon = pygame.image.load('sim/ims/audio.png')
         field = pygame.Surface(dat.get_positions()['Rects']['Board_size'][1])
@@ -169,16 +170,21 @@ class EV3BrickSim:
             def extend(points, dir):
                 return [(i[0], i[1] + dir//2) for i in points] + [(i[0], i[1] + dir//2) for i in points[::-1]]
             
-            fork_one = extend([(pos[0], pos[1] + 20), (pos[0], pos[1] - 100)], -8)
+            fork_width = 10
+            fork_one = extend([(pos[0], pos[1] + 20), (pos[0], pos[1] - 100)], -fork_width)
             roted_fone = [rotate(drivebase.position, i, -drivebase.rotation) for i in fork_one]
-            pygame.draw.line(field, 0, roted_fone[0], roted_fone[1], 8)
-            fork_two = extend([(pos[0] + sze[0], pos[1] + 20), (pos[0] + sze[0], pos[1] - 100)], 8)
+            pygame.draw.line(field, 0, roted_fone[0], roted_fone[1], fork_width)
+            fork_two = extend([(pos[0] + sze[0], pos[1] + 20), (pos[0] + sze[0], pos[1] - 100)], fork_width)
             roted_ftwo = [rotate(drivebase.position, i, -drivebase.rotation) for i in fork_two]
-            pygame.draw.line(field, 0, roted_ftwo[0], roted_ftwo[1], 8)
+            pygame.draw.line(field, 0, roted_ftwo[0], roted_ftwo[1], fork_width)
             
             ## Objs
             for o in objs:
-                o.update(field, [roted_rect, roted_fone, roted_ftwo], -toPolar(prev_position[1], drivebase.position)[1]+90)
+                o.update(field, 
+                         [(roted_rect, True), (roted_fone, False), (roted_ftwo, False)], 
+                         -toPolar(prev_position[1], drivebase.position)[1]+90, 
+                         prev_rotation[1] - drivebase.rotation,
+                         drivebase.position)
             
             ## Put the path on the field
             for i in path:
@@ -235,6 +241,9 @@ class EV3BrickSim:
             if prev_position[0] != drivebase.position:
                 prev_position[1] = prev_position[0]
                 prev_position[0] = drivebase.position
+            if prev_rotation[0] != drivebase.rotation:
+                prev_rotation[1] = prev_rotation[0]
+                prev_rotation[0] = drivebase.rotation
     
     def generate_face(self):
         whole = pygame.Surface((200, 400))

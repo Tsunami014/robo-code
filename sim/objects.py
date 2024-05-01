@@ -26,22 +26,27 @@ class Obj:
         self.points = [rotate(self.centre, i, angle) for i in self.points]
         self.centre = self.find_centre() # Though *should* be the same, but rounding errors occur so...
     
-    def collision(self, points, angle):
+    def collision(self, points, angle, angle_dir, rotate_around, move_collide):
         if points == [] or self.points == []:
             return False
-        points = shapely.geometry.Polygon(points)
+        point_box = shapely.geometry.Polygon(points)
+        line = shapely.geometry.LineString(points[:2])
+        dir = 1 if angle_dir > 1 else (-1 if angle_dir < -1 else 0)
         box = shapely.geometry.Polygon(self.points)
         attempts = 0
-        while box.intersects(points) and attempts < 100: # Do not block anything
-            self.moveby(*rotate((0, 0), (0, 10), angle))
+        while (box.intersects(point_box) or line.intersects(box)) and (move_collide or dir != 0) and attempts < 100: # Do not block anything
+            if move_collide:
+                self.moveby(*rotate((0, 0), (0, 10), angle))
+            self.moveby(*rotate((rotate_around[0] - self.centre[0], rotate_around[1] - self.centre[1]), (0, 0), dir))
             box = shapely.geometry.Polygon(self.points)
+            self.centre = self.find_centre()
             attempts += 1
     
-    def update(self, win, objects, angle):
+    def update(self, win, objects, angle, angle_dir, rotate_around):
         if len(self.points) < 2:
             return
         for obj in objects:
-            self.collision(obj, angle)
+            self.collision(obj[0], angle, round(angle_dir), rotate_around, obj[1])
         prev = self.points[0]
         for i in self.points[1:]:
             pygame.draw.line(win, self.colour, prev, i, 10)
