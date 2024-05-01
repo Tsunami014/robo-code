@@ -171,14 +171,14 @@ class EV3BrickSim:
             )
 
             self.win.blit(
-                font.render(f"Goal: {round_list(drivebase.goals)}, driving: {drivebase.driving}",
+                font.render("Goal: " + str(round_list(drivebase.goals)) + ", driving: " + str(drivebase.driving),
                             1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 20))
 
             self.win.blit(
-                font.render(f"Accumulated distance and rotation: {(round(drivebase.distance(), 2), round(drivebase.angle(), 2))}",
+                font.render("Accumulated distance and rotation: " + str(round(drivebase.distance(), 2), round(drivebase.angle(), 2)),
                             1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 30))
             
-            self.win.blit(font.render(f"Path plotter {'en' if path_plotter else 'dis'}abled, toggle with 'P'", 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 50))
+            self.win.blit(font.render("Path plotter " + ('en' if path_plotter else 'dis') + "abled, toggle with 'P'", 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 50))
             if path_plotter:
                 paras = [
                     "R: Restart (empty path)",
@@ -189,7 +189,7 @@ class EV3BrickSim:
                     "O: Open a path from a file",
                     "",
                     "Current path:",
-                    "[" + ", ".join([f"({str(round(i[0], 2))}, {str(round(i[1], 2))})" for i in path]) + "]"
+                    "[" + ", ".join(["(" + str(round(i[0], 2)) + ", " + str(round(i[1], 2)) + ")" for i in path]) + "]"
                 ]
                 for i in range(len(paras)):
                     self.win.blit(font.render(paras[i], 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 65 + 10 * i))
