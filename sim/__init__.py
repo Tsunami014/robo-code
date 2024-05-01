@@ -139,8 +139,8 @@ class EV3BrickSim:
             sze = (100, 100)
             robot = pygame.Surface(sze)
             robot.fill((255, 255, 255))
-            pygame.draw.rect(robot, 0, (0, 0, *sze), 15)
-            pygame.draw.rect(robot, (255, 255, 255), (0, 0, *sze), 1)
+            pygame.draw.rect(robot, 0, (0, 0, sze[0], sze[1]), 15)
+            pygame.draw.rect(robot, (255, 255, 255), (0, 0, sze[0], sze[1]), 1)
             roboPic = pygame.font.Font(None, 100).render('<=', 1, 0)
             robot.blit(roboPic, ((sze[0] - roboPic.get_width())/2, (sze[1] - roboPic.get_height())/2))
             roted = pygame.transform.rotate(robot, -drivebase.rotation-90)
@@ -166,7 +166,7 @@ class EV3BrickSim:
             round_list = lambda l: [i if not hasattr(i, '__round__') else round(i, 2) for i in l]
             
             self.win.blit(
-                font.render(str(mpos) + "  " + str((*round_list(drivebase.position), round(drivebase.rotation, 2))), 1, 0), 
+                font.render(str(mpos) + "  " + str((round(drivebase.position[0], 2), round(drivebase.position[1], 2), round(drivebase.rotation, 2))), 1, 0), 
                 (fieldpos[0], fieldpos[1] + fieldsize[1] + 10)
             )
 
