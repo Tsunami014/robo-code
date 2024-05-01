@@ -118,6 +118,7 @@ class EV3BrickSim:
                         else:
                             drivebase.position = path[0]
                             drivebase.rotation = 90
+                            drivebase.reset()
                             t = start_thread()
                     elif path_plotter:
                         if event.key == pygame.K_r:
