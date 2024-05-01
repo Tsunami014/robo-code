@@ -33,7 +33,7 @@ class Obj:
         box = shapely.geometry.Polygon(self.points)
         attempts = 0
         while box.intersects(points) and attempts < 100: # Do not block anything
-            self.moveby(*rotate((0, 0), (0, 1), angle))
+            self.moveby(*rotate((0, 0), (0, 10), angle))
             box = shapely.geometry.Polygon(self.points)
             attempts += 1
     
