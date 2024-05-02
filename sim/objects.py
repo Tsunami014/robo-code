@@ -26,7 +26,17 @@ class Obj:
         self.points = [rotate(self.centre, i, angle) for i in self.points]
         self.centre = self.find_centre() # Though *should* be the same, but rounding errors occur so...
     
-    def collision(self, points, angle, angle_dir, rotate_around, turn_collide):
+    def collision(self, ps, angle, angle_dir, rotate_around, turn_collide):
+        if isinstance(ps, (list, tuple)):
+            points = ps
+        elif isinstance(ps, Obj):
+            points = ps.points
+        else:
+            raise TypeError(
+                f'Inputted value for param \'ps\' "{ps}" has type {type(ps)} which is not a list, tuple or Obj!'
+            )
+        assert isinstance(turn_collide, int), f"Value for param 'turn_collide' \"{turn_collide}\" which has type {type(turn_collide)} which is not an int!"
+        assert turn_collide in [0, 1], f"Value for param 'turn_collide' \"{turn_collide}\" is not 0 or 1!"
         if points == [] or self.points == []:
             return False
         point_box = shapely.geometry.Polygon(points)
@@ -34,7 +44,7 @@ class Obj:
         dir = 1 if angle_dir > 1 else (-1 if angle_dir < -1 else 0)
         box = shapely.geometry.Polygon(self.points)
         attempts = -1 # Do not block anything
-        if turn_collide and dir != 0:
+        if turn_collide == 1 and dir != 0:
             while (box.intersects(point_box) or line.intersects(box)) and attempts < 100:
                 self.moveby(*rotate((rotate_around[0] - self.centre[0], rotate_around[1] - self.centre[1]), (0, 0), dir))
                 box = shapely.geometry.Polygon(self.points)
