@@ -57,8 +57,8 @@ class EV3BrickSim:
         if dat.path_exists():
             path = dat.load_path()
         else:
-            path = [drivebase.position]
-        drivebase.position = path[0]
+            path = [[drivebase.position, None]]
+        drivebase.position = path[0][0]
         prev_position = [drivebase.position, drivebase.position]
         prev_rotation = [drivebase.rotation, drivebase.rotation]
         font = pygame.font.SysFont(None, 16)
@@ -119,7 +119,7 @@ class EV3BrickSim:
                                 t.raise_exc(DoNotPrintException)
                             drivebase.stop()
                         else:
-                            drivebase.position = path[0]
+                            drivebase.position = path[0][0]
                             drivebase.rotation = 90
                             drivebase.reset()
                             t = start_thread()
@@ -127,16 +127,21 @@ class EV3BrickSim:
                             i.reset()
                     elif path_plotter:
                         if event.key == pygame.K_r:
-                            path = [drivebase.position]
+                            path = [[drivebase.position, 0]]
                             for i in objs: 
                                 i.reset()
                         elif event.key == pygame.K_b:
                             for i in objs: 
                                 i.reset()
                         elif event.key == pygame.K_i:
-                            path.append(drivebase.position)
+                            path.append([drivebase.position, None])
+                        elif event.key == pygame.K_j:
+                            path.append([drivebase.position, drivebase.rotation])
                         elif event.key == pygame.K_d and len(path) > 1:
-                            drivebase.position = path.pop()
+                            last = path.pop()
+                            drivebase.position = last[0]
+                            if last[1] is not None:
+                                drivebase.rotation = last[1]
                         elif event.key == pygame.K_s:
                             dat.save_path(path)
                         elif event.key == pygame.K_a:
@@ -147,7 +152,7 @@ class EV3BrickSim:
                             f = askopenfile(mode='r', filetypes=[('JSON files', '*.json')])
                             path = load(f)
                             f.close()
-                            drivebase.position = path[0]
+                            drivebase.position = path[0][0]
                             for i in objs: 
                                 i.reset()
             
@@ -196,7 +201,7 @@ class EV3BrickSim:
             
             ## Put the path on the field
             for i in path:
-                pygame.draw.circle(field, (10, 50, 255), i, 8)
+                pygame.draw.circle(field, (10, 50, 255), i[0], 8)
             
             ## Re-render the field with these new objects on it
             fieldsur = scale_sur(field, fieldsize)
@@ -230,14 +235,17 @@ class EV3BrickSim:
                     "",
                     "R: Restart (empty path)",
                     "B: Reset all objects to their original positions",
+                    "",
                     "I: Insert current position to path",
+                    "J: Insert both position and rotation to path",
                     "D: Delete last position on path (and go to it)",
+                    "",
                     "S: Save path to what will be used in the program",
                     "A: Save path to a separate file (save as)",
                     "O: Open a path from a file",
                     "",
                     "Current path:",
-                    "[" + ", ".join(["(" + str(round(i[0], 2)) + ", " + str(round(i[1], 2)) + ")" for i in path]) + "]"
+                    "[" + ", ".join(["(" + str(round(i[0][0], 2)) + ", " + str(round(i[0][1], 2)) + ", " + str(None if i[1] is None else round(i[1], 2)) + ")" for i in path]) + "]"
                 ]
                 for i in range(len(paras)):
                     self.win.blit(font.render(paras[i], 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 65 + 10 * i))
