@@ -151,6 +151,14 @@ class EV3BrickSim:
                             for i in objs: 
                                 i.reset()
             
+            ## More than once-off events
+            if path_plotter:
+                keys = pygame.key.get_pressed()
+                if keys[pygame.K_LEFT]:
+                    drivebase.rotation -= 1
+                elif keys[pygame.K_RIGHT]:
+                    drivebase.rotation += 1
+            
             # More field stuff
             ## Robot
             sze = (100, 100)
@@ -217,6 +225,9 @@ class EV3BrickSim:
             self.win.blit(font.render("Path plotter " + ('en' if path_plotter else 'dis') + "abled, toggle with 'P'", 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 50))
             if path_plotter:
                 paras = [
+                    "Click (and hold): Move robot",
+                    "Arrow keys (L&R): Rotate robot",
+                    "",
                     "R: Restart (empty path)",
                     "B: Reset all objects to their original positions",
                     "I: Insert current position to path",
