@@ -189,7 +189,7 @@ class EV3BrickSim:
             ## Objs
             for o in objs:
                 o.update(field, 
-                         [(roted_rect, True), (roted_fone, False), (roted_ftwo, False)], 
+                         [(roted_rect, False), (roted_fone, True), (roted_ftwo, True)], 
                          -toPolar(prev_position[1], drivebase.position)[1]+90, 
                          prev_rotation[1] - drivebase.rotation,
                          drivebase.position)
