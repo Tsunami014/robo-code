@@ -49,9 +49,6 @@ class Stop(Enum):
     """
 
 class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for the base PID code!
-    # TODO: Make trapezoid shape PID: Speed up at start and slow down when almost at goal
-    # But make it an option, and use the Stop.
-    # But only do that when I go for speed PIDs instead of position PIDs
     """Class to interact with PID controller and settings."""
 
     # scale value not here, shouldn't be a problem for most code
@@ -124,27 +121,36 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
             return output
 
         # Compute error terms
-        if maindiff < 0:
-            goal = -self.ControlLimits[0]
+        maxspeed = self.ControlLimits[0] / time.FRAMERATE
+        if stop == Stop.NONE or abs(self.current) < 1:
+            if maindiff < 0:
+                goal = -self.ControlLimits[0]
+            else:
+                goal = self.ControlLimits[0]
         else:
-            goal = self.ControlLimits[0]
-        # TODO: Make the below actually work
-        """if stop == Stop.NONE:
-            goal = self.ControlLimits[0]
-        else:
-            # TODO: Make sure you still move even if you are in range of the goal
-            # Convert from mm/sec to mm/frame
+            ## Convert from mm/sec to mm/frame
             maxaccel = self.ControlLimits[1][1] / time.FRAMERATE
-            maxspeed = self.ControlLimits[0] / time.FRAMERATE
+            current_speed = self.current
+            current_accel = self.prev_accel / time.FRAMERATE
+            # current_accel = self.prev_accel / time.FRAMERATE
             # Calculate how close you need to be before stopping
-            # Round to make sure calculations aren't getting tuck due to stray numbers
-            maxframes = ceil(round(maxspeed / maxaccel,8)) # How many frames needed to get from max to min, because you slow down by your max accel every frame
-            framemovements = [maxaccel * i for i in range(maxframes)] + [maxspeed]
-            closest = sum(framemovements) # The closest you can be before the goal to arrive at the correct position if you start slowing down right now
-            if closest >= maindiff:
+            # Round to make sure calculations aren't getting stuck due to stray numbers
+            movement = 0
+            i = 0
+            while current_speed > 0:
+                i += 1
+                current_speed += current_accel
+                current_accel -= maxaccel
+                current_accel = _clamp(current_accel, (-self.ControlLimits[0], self.ControlLimits[0]))
+                movement += current_speed
+            #closest = sum([maxaccel * j for j in range(i)]) # The closest you can be before the goal to arrive at the correct position if you start slowing down right now
+            if movement >= maindiff:
                 goal = 0
             else:
-                goal = self.ControlLimits[0]"""
+                if maindiff < 0:
+                    goal = -self.ControlLimits[0]
+                else:
+                    goal = self.ControlLimits[0]
         error = goal - self.current
         d_input = self.current - (self._last_input if (self._last_input is not None) else self.current)
         d_error = error - (self._last_error if (self._last_error is not None) else error)
@@ -172,7 +178,8 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
         diff = diff / dt # Convert from mm/(amount of frames) to mm/1 frame
         diff = diff * time.FRAMERATE # Convert from mm/frame to mm/sec
         if self.ControlLimits[1] is not None: # Control max acceleration by limiting how much it can change over time
-            diff = _clamp(diff, (-(abs(self.prev_accel) + self.ControlLimits[1][1]), (abs(self.prev_accel) + self.ControlLimits[1][0])))
+            diff = _clamp(diff, (self.prev_accel - self.ControlLimits[1][1], self.prev_accel + self.ControlLimits[1][0]))
+        diff = _clamp(diff, (-self.ControlLimits[0], self.ControlLimits[0])) # You should never accelerate higher than max speed
         self.prev_accel = diff
         output = (self.current * time.FRAMERATE) + diff # Get the new output, converting old from mm/frame to mm/sec
         # Clamp the maximum to account for max speed limits
