@@ -54,6 +54,8 @@ class EV3BrickSim:
         objs = [
             Obj(pygame.color.THECOLORS[i.strip('_box').lower()], rawobjs[i]) for i in rawobjs
         ]
+        start_box_rect = dat.get_positions()['Rects']['start_box']
+        start_box_obj = Obj((0, 0, 0), [start_box_rect[0], (start_box_rect[1][0], start_box_rect[0][1]), start_box_rect[1], (start_box_rect[0][0], start_box_rect[1][1])])
         if dat.path_exists():
             path = dat.load_path()
         else:
@@ -166,7 +168,7 @@ class EV3BrickSim:
             
             # More field stuff
             ## Robot
-            sze = (100, 100)
+            sze = (175, 155)
             robot = pygame.Surface(sze)
             robot.fill((255, 255, 255))
             pygame.draw.rect(robot, 0, (0, 0, sze[0], sze[1]), 15)
@@ -183,11 +185,12 @@ class EV3BrickSim:
             def extend(points, dir):
                 return [(i[0], i[1] + dir//2) for i in points] + [(i[0], i[1] + dir//2) for i in points[::-1]]
             
-            fork_width = 10
-            fork_one = extend([(pos[0], pos[1] + 20), (pos[0], pos[1] - 100)], -fork_width)
+            fork_width = 20
+            fork_length = 115
+            fork_one = extend([(pos[0], pos[1] + 20), (pos[0], pos[1] - fork_length)], -fork_width)
             roted_fone = [rotate(drivebase.position, i, -drivebase.rotation) for i in fork_one]
             pygame.draw.line(field, 0, roted_fone[0], roted_fone[1], fork_width)
-            fork_two = extend([(pos[0] + sze[0], pos[1] + 20), (pos[0] + sze[0], pos[1] - 100)], fork_width)
+            fork_two = extend([(pos[0] + sze[0], pos[1] + 20), (pos[0] + sze[0], pos[1] - fork_length)], fork_width)
             roted_ftwo = [rotate(drivebase.position, i, -drivebase.rotation) for i in fork_two]
             pygame.draw.line(field, 0, roted_ftwo[0], roted_ftwo[1], fork_width)
             
@@ -198,6 +201,8 @@ class EV3BrickSim:
                          -toPolar(prev_position[1], drivebase.position)[1]+90, 
                          prev_rotation[1] - drivebase.rotation,
                          drivebase.position)
+            
+            start_box_obj.update(field, [], None, None, None)
             
             ## Put the path on the field
             for i in path:
