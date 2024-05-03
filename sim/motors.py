@@ -10,8 +10,6 @@ except:
     class Enum:
         pass
 
-Number = int | float
-
 def _clamp(value, limits):
     lower, upper = limits
     if value is None:
@@ -193,9 +191,9 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
     @overload
     def limits(
         self,
-        speed: Number = None,
-        acceleration: Number = None,
-        torque: Number = None,
+        speed = None,
+        acceleration = None,
+        torque = None,
     ) -> None: ...
 
     @overload
@@ -236,11 +234,11 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
     @overload
     def pid(
         self,
-        kp: Number = None,
-        ki: Number = None,
-        kd: Number = None,
-        integral_deadzone: Number = None,
-        integral_rate: Number = None,
+        kp = None,
+        ki = None,
+        kd = None,
+        integral_deadzone = None,
+        integral_rate = None,
     ) -> None: ...
 
     @overload
@@ -278,7 +276,7 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
 
     @overload
     def target_tolerances(
-        self, speed: Number = None, position: Number = None
+        self, speed = None, position = None
     ) -> None: ...
 
     @overload
@@ -307,7 +305,7 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
 
     @overload
     def stall_tolerances(
-        self, speed: Number = None, time: Number = None
+        self, speed = None, time = None
     ) -> None: ...
 
     @overload

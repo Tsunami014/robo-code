@@ -6,6 +6,8 @@ try: # DO NOT IMPORT THINGS if running on the robot
     
     from sim.converts import ConvertColor, ConvertFont, ConvertImage, ConvertImageFile
 
+    from pygame.surface import Surface
+    import pygame.draw
     from pygame.key import get_pressed
     import pygame.locals as pgls
 except:
@@ -118,9 +120,6 @@ class Light:
         Turns off the light.
         """
         self.state = (0, 0, 0)
-
-from pygame.surface import Surface
-import pygame.draw
 
 class Screen:
     """
