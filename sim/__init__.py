@@ -185,12 +185,13 @@ class EV3BrickSim:
             def extend(points, dir):
                 return [(i[0], i[1] + dir//2) for i in points] + [(i[0], i[1] + dir//2) for i in points[::-1]]
             
-            fork_width = 20
+            fork_width = 8
             fork_length = 115
-            fork_one = extend([(pos[0], pos[1] + 20), (pos[0], pos[1] - fork_length)], -fork_width)
+            fork_dist_from_edge = 32 + (fork_width / 2)
+            fork_one = extend([(pos[0] + fork_dist_from_edge, pos[1] + 20), (pos[0] + fork_dist_from_edge, pos[1] - fork_length)], -fork_width)
             roted_fone = [rotate(drivebase.position, i, -drivebase.rotation) for i in fork_one]
             pygame.draw.line(field, 0, roted_fone[0], roted_fone[1], fork_width)
-            fork_two = extend([(pos[0] + sze[0], pos[1] + 20), (pos[0] + sze[0], pos[1] - fork_length)], fork_width)
+            fork_two = extend([(pos[0] + sze[0] - fork_dist_from_edge, pos[1] + 20), (pos[0] + sze[0] - fork_dist_from_edge, pos[1] - fork_length)], fork_width)
             roted_ftwo = [rotate(drivebase.position, i, -drivebase.rotation) for i in fork_two]
             pygame.draw.line(field, 0, roted_ftwo[0], roted_ftwo[1], fork_width)
             
