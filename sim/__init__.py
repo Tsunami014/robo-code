@@ -1,5 +1,5 @@
 from sim.mathMethods import toPolar
-from sim.motors import Motor, Control, Number, Stop
+from sim.motors import Motor, Control, Stop
 
 try: # DO NOT IMPORT THINGS if running on the robot
     import os
@@ -329,7 +329,7 @@ class DriveBaseSim:
         self.settings(1000, 100, 110, 20)
     
     def straight(
-        self, distance: Number, then: Stop = Stop.HOLD, wait: bool = True
+        self, distance, then: Stop = Stop.HOLD, wait: bool = True
     ):
         """straight(distance, then=Stop.HOLD, wait=True)
 
@@ -353,7 +353,7 @@ class DriveBaseSim:
                 pass
 
     def turn(
-        self, angle: Number, then: Stop = Stop.HOLD, wait: bool = True
+        self, angle, then: Stop = Stop.HOLD, wait: bool = True
     ):
         """turn(angle, then=Stop.HOLD, wait=True)
 
@@ -377,7 +377,7 @@ class DriveBaseSim:
                 pass
 
     def curve(
-        self, radius: Number, angle: Number, then: Stop = Stop.HOLD, wait: bool = True
+        self, radius, angle, then: Stop = Stop.HOLD, wait: bool = True
     ):
         """curve(radius, angle, then=Stop.HOLD, wait=True)
 
@@ -438,10 +438,10 @@ class DriveBaseSim:
     @overload
     def settings(
         self,
-        straight_speed: Number = None,
-        straight_acceleration: Number = None,
-        turn_rate: Number = None,
-        turn_acceleration: Number = None,
+        straight_speed = None,
+        straight_acceleration = None,
+        turn_rate = None,
+        turn_acceleration = None,
     ) -> None: ...
 
     @overload
