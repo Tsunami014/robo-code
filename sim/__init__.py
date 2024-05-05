@@ -72,6 +72,7 @@ class EV3BrickSim:
         time.set_fr(fr)
         t = None
         def start_thread():
+            dat.set_override(path)
             newt = KThread(target=function, name='Simulated EV3 program', daemon=True)
             newt.start()
             return newt

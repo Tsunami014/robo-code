@@ -1,5 +1,11 @@
 import json, os
 
+OVERRIDE_PATH = None
+
+def set_override(path):
+    global OVERRIDE_PATH
+    OVERRIDE_PATH = path
+
 def get_positions():
     with open('dat/positions.json') as f:
         d = json.load(f)
@@ -9,6 +15,8 @@ def path_exists():
     return os.path.exists('dat/path.json')
 
 def load_path():
+    if OVERRIDE_PATH is not None:
+        return OVERRIDE_PATH
     with open('dat/path.json') as f:
         d = json.load(f)
     for elm in d:
