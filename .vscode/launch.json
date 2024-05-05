@@ -17,6 +17,18 @@
             "request": "launch",
             "program": "test.py",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "Python Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "cwd": "${workspaceFolder}",
+            "purpose": ["debug-in-terminal"],
+            "env": {
+                "PYTHONPATH": "${cwd}"
+            },
+            "console": "integratedTerminal"
         }
     ]
 }
