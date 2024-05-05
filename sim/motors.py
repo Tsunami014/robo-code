@@ -61,7 +61,7 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
         self.Kp, self.Ki, self.Kd = 1, 0, 0
         # PID values
         
-        self.ControlLimits = [None, None, None] # TODO: This
+        self.ControlLimits = [1000, [100, 100], None]
         # speed, acceleration, torque
         
         self.TargetTs = [0, 0] # TODO: This
