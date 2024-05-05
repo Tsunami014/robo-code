@@ -571,9 +571,7 @@ class DriveBaseSim:
                 goal = self.goals[0]
             else:
                 goal = 100
-            newgoalpos = rotate(self.position, (self.position[0], self.position[1] - goal), -self.rotation)
-            diff = newgoalpos[0] - self.position[0] + newgoalpos[1] - self.position[1]
-            speeds[0] = self.distance_control(diff, self.do)
+            speeds[0] = self.distance_control(goal, self.do)
         else:
             speeds[0] = self.distance_control(None, self.do, False)
         if self.driving[1] or self.goals[1] is not None:
