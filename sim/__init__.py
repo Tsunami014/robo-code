@@ -572,7 +572,7 @@ class DriveBaseSim:
             else:
                 goal = 100
             newgoalpos = rotate(self.position, (self.position[0], self.position[1] - goal), -self.rotation)
-            diff = abs(self.position[0] - newgoalpos[0]) + abs(self.position[1] - newgoalpos[1])
+            diff = newgoalpos[0] - self.position[0] + newgoalpos[1] - self.position[1]
             speeds[0] = self.distance_control(diff, self.do)
         else:
             speeds[0] = self.distance_control(None, self.do, False)

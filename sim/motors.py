@@ -121,7 +121,7 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
             return output
 
         # Compute error terms
-        maxspeed = self.ControlLimits[0] / time.FRAMERATE
+        # maxspeed = self.ControlLimits[0] / time.FRAMERATE
         if stop == Stop.NONE or abs(self.current) < 1:
             if maindiff < 0:
                 goal = -self.ControlLimits[0]
@@ -129,9 +129,9 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
                 goal = self.ControlLimits[0]
         else:
             ## Convert from mm/sec to mm/frame
-            maxaccel = self.ControlLimits[1][1] / time.FRAMERATE
-            current_speed = self.current
-            current_accel = self.prev_accel / time.FRAMERATE
+            maxaccel = self.ControlLimits[1][1 if self.current > 0 else 0] / time.FRAMERATE
+            current_speed = abs(self.current)
+            current_accel = abs(self.prev_accel) / time.FRAMERATE
             # current_accel = self.prev_accel / time.FRAMERATE
             # Calculate how close you need to be before stopping
             # Round to make sure calculations aren't getting stuck due to stray numbers
@@ -144,7 +144,7 @@ class Control: # Thanks a lot to https://github.com/m-lundberg/simple-pid for th
                 current_accel = _clamp(current_accel, (-self.ControlLimits[0], self.ControlLimits[0]))
                 movement += current_speed
             #closest = sum([maxaccel * j for j in range(i)]) # The closest you can be before the goal to arrive at the correct position if you start slowing down right now
-            if movement >= maindiff:
+            if movement >= abs(maindiff):
                 goal = 0
             else:
                 if maindiff < 0:
