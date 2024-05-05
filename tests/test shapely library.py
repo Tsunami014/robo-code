@@ -1,5 +1,3 @@
-# time: ~20-25 mins 
-
 import pygame, shapely.geometry, math
 pygame.init()
 
