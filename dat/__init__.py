@@ -4,7 +4,7 @@ OVERRIDE_PATH = None
 
 def set_override(path):
     global OVERRIDE_PATH
-    OVERRIDE_PATH = path
+    OVERRIDE_PATH = path.copy()
 
 def get_positions():
     with open('dat/positions.json') as f:
