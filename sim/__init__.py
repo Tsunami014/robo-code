@@ -171,11 +171,13 @@ class EV3BrickSim:
             
             ## More than once-off events
             if path_plotter:
+                ms = pygame.key.get_mods()
+                speed = (6 if ms & pygame.KMOD_SHIFT else (1 if ms & pygame.KMOD_CTRL else 3))
                 keys = pygame.key.get_pressed()
                 if keys[pygame.K_LEFT]:
-                    drivebase.rotation -= 1
+                    drivebase.rotation -= speed
                 elif keys[pygame.K_RIGHT]:
-                    drivebase.rotation += 1
+                    drivebase.rotation += speed
             
             # More field stuff
             ## Robot
@@ -249,7 +251,7 @@ class EV3BrickSim:
                 paras = [
                     "Click (and hold): Move robot forwards/back",
                     "Shift+Click (and hold): Move robot anywhere",
-                    "Arrow keys (L&R): Rotate robot",
+                    "Arrow keys (L&R): Rotate robot (Shift: move faster, Ctrl: move slower)",
                     "",
                     "R: Restart (empty path)",
                     "B: Reset all objects to their original positions",
