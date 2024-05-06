@@ -24,11 +24,9 @@
             "request": "launch",
             "program": "${file}",
             "cwd": "${workspaceFolder}",
-            "purpose": ["debug-in-terminal"],
             "env": {
                 "PYTHONPATH": "${cwd}"
             },
-            "console": "integratedTerminal"
         }
     ]
 }
