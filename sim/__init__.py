@@ -23,7 +23,8 @@ try: # DO NOT IMPORT THINGS if running on the robot
     from sim.mathMethods import (
         scale_sur,
         rotate,
-        fixangle
+        fixangle,
+        CPOL
     )
 except:
     overload = lambda *args: None
@@ -100,13 +101,19 @@ class EV3BrickSim:
                 mpos[1] -= diff
             # use_mpos = not any([mpos[0] < 0 or mpos[0] > smaller.get_width(), mpos[1] < 0 or mpos[1] > smaller.get_height()])
             # if use_mpos
-            if pygame.mouse.get_pressed()[0] and path_plotter: # Only if you are pressing down the mouse AND have the path plotter enabled will this ever be True
-                drivebase.position = mpos
+            
             mpos[0] /= scale
             mpos[1] /= scale
             
             keeponfield = lambda val, spot: min(max(val, 0), field.get_size()[spot])
             mpos = [keeponfield(round(mpos[0], 1), 0), keeponfield(round(mpos[1], 1), 0)]
+            
+            if pygame.mouse.get_pressed()[0] and path_plotter: # Only if you are pressing down the mouse AND have the path plotter enabled will this ever be True
+                add_position = lambda p: (drivebase.position[0] + p[0], drivebase.position[1] + p[1])
+                rot = rotate((0, 0), (0, 1000), -drivebase.rotation)
+                high = add_position(rot)
+                low = add_position((-rot[0], -rot[1]))
+                drivebase.position = CPOL(high, low, mpos)
             
             # Do some event stuff here before continuing with other objects as this has some effects on some of the objects
             for event in pygame.event.get():

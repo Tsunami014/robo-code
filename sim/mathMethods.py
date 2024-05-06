@@ -50,3 +50,29 @@ def toPolar(origin, point): # Thanks to https://stackoverflow.com/questions/2092
     rho = math.sqrt(x**2 + y**2)
     phi = math.degrees(math.atan2(y, x)) % 360
     return (rho, phi) # rho: distance, phi: angle
+
+def CPOL(p1, p2, p3): # Thanks to https://stackoverflow.com/questions/47177493/python-point-on-a-line-closest-to-third-point
+    """
+    find the Closest Point on a Line
+
+    Parameters
+    ----------
+    p1 : tupe[int,int]
+        The starting point of the line
+    p2 : tupe[int,int]
+        The ending point of the line
+    p3 : tupe[int,int]
+        The point to find the closest point on the line to
+
+    Returns
+    -------
+    tupe[int,int]
+        The closest point on the line
+    """
+    x1, y1 = p1
+    x2, y2 = p2
+    x3, y3 = p3
+    dx, dy = x2-x1, y2-y1
+    det = dx*dx + dy*dy
+    a = (dy*(y3-y1)+dx*(x3-x1))/det
+    return x1+a*dx, y1+a*dy
