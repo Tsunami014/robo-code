@@ -109,11 +109,14 @@ class EV3BrickSim:
             mpos = [keeponfield(round(mpos[0], 1), 0), keeponfield(round(mpos[1], 1), 0)]
             
             if pygame.mouse.get_pressed()[0] and path_plotter: # Only if you are pressing down the mouse AND have the path plotter enabled will this ever be True
-                add_position = lambda p: (drivebase.position[0] + p[0], drivebase.position[1] + p[1])
-                rot = rotate((0, 0), (0, 1000), -drivebase.rotation)
-                high = add_position(rot)
-                low = add_position((-rot[0], -rot[1]))
-                drivebase.position = CPOL(high, low, mpos)
+                if pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                    drivebase.position = mpos
+                else:
+                    add_position = lambda p: (drivebase.position[0] + p[0], drivebase.position[1] + p[1])
+                    rot = rotate((0, 0), (0, 1000), -drivebase.rotation)
+                    high = add_position(rot)
+                    low = add_position((-rot[0], -rot[1]))
+                    drivebase.position = CPOL(high, low, mpos)
             
             # Do some event stuff here before continuing with other objects as this has some effects on some of the objects
             for event in pygame.event.get():
@@ -244,7 +247,8 @@ class EV3BrickSim:
             self.win.blit(font.render("Path plotter " + ('en' if path_plotter else 'dis') + "abled, toggle with 'P'", 1, 0), (fieldpos[0], fieldpos[1] + fieldsize[1] + 50))
             if path_plotter:
                 paras = [
-                    "Click (and hold): Move robot",
+                    "Click (and hold): Move robot forwards/back",
+                    "Shift+Click (and hold): Move robot anywhere",
                     "Arrow keys (L&R): Rotate robot",
                     "",
                     "R: Restart (empty path)",
