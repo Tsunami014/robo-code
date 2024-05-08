@@ -20,9 +20,12 @@ And on Windows make sure you ticked the `Tcl support for Python 3.11` when insta
 # Simulator
  - Example code (for *my* way of working on the project) is stored in the `examples/` directory, just copy all the files to the main directory to see it work! Also has the simulator in it too!
 
-## TODOS FOR THE SIM (Most to least important, tho it )
+## TODOS FOR THE SIM
+Sorted in order of most to least important, tho the sim still works; these are just room for improvement.
  - [ ] Fix collisions
  - [ ] Add rotation to the collisions
  - [ ] Fix the still says what buttons are pressed when in path plotter mode
- - [ ] Fix the text for the buttons in path plotter mode going off the edge of the screen\
+ - [ ] Make you able to manually specify a point to modify coords of
+ - [ ] Make you able to see exactly where to put the robot to start
+ - [ ] Fix the text for the buttons in path plotter mode going off the edge of the screen
  - [ ] Able to resize anything
