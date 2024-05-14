@@ -24,8 +24,11 @@ And on Windows make sure you ticked the `Tcl support for Python 3.11` when insta
 Sorted in order of most to least important, tho the sim still works; these are just room for improvement.
  - [ ] Fix collisions
  - [ ] Add rotation to the collisions
+ - [ ] Make the path 
  - [ ] Fix the still says what buttons are pressed when in path plotter mode
  - [ ] Make you able to manually specify a point to modify coords of
  - [ ] Make you able to see exactly where to put the robot to start
  - [ ] Fix the text for the buttons in path plotter mode going off the edge of the screen
  - [ ] Able to resize anything
+
+<small>Please note that the above should be checkboxes, if they aren't then your markdown viewer obviously doesn't have that capability. You can get this for vscode [here](https://marketplace.visualstudio.com/items?itemName=bierner.markdown-checkbox)</small>
