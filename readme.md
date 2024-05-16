@@ -27,13 +27,13 @@ Some stuff I used in testing.
 
 ## TODOS FOR THE SIM
 Sorted in order of most to least important, tho the sim still works; these are just room for improvement.
+ - [ ] Make you able to see exactly where to put the robot to start
  - [ ] Fix collisions
  - [ ] Add rotation to the collisions
  - [ ] Overhaul the path
  - [ ] Finish the tests
  - [ ] Fix the still says what buttons are pressed when in path plotter mode
  - [ ] Make you able to manually specify a point to modify coords of
- - [ ] Make you able to see exactly where to put the robot to start
  - [ ] Fix bug in drive that makes you able to drive past max speeds
  - [ ] Fix the text for the buttons in path plotter mode going off the edge of the screen
  - [ ] Add support for more things (ultrasonic sensor, etc.)
