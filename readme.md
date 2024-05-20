@@ -20,6 +20,10 @@ And on Windows make sure you ticked the `Tcl support for Python 3.11` when insta
 # Simulator
  - Example code (for *my* way of working on the project) is stored in the `examples/` directory, just copy all the files to the main directory to see it work! Also has the simulator in it too!
 
+<video width="320" height="240" controls>
+  <source src="Showcase.mp4" type="video/mp4">
+</video>
+
 # Tests
 Some stuff I used in testing.
 - `test shapely library.py` was to see about the new library for collision detection, which I made expertly in ~20-25 mins

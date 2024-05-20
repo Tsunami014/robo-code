@@ -7,7 +7,6 @@ __pycache__/
 # DO NOT COMMIT PERSONAL CODE
 main.py
 test.py
-pseudocode/*
 dat/path.json
 # But do commit the examples
 !examples/main.py
