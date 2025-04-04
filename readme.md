@@ -20,6 +20,8 @@ And on Windows make sure you ticked the `Tcl support for Python 3.11` when insta
 # Simulator
  - Example code (for *my* way of working on the project) is stored in the `examples/` directory, just copy all the files to the main directory to see it work! Also has the simulator in it too!
 
+https://github.com/user-attachments/assets/7dcd778f-9139-4b8d-82e9-a317fe360c34
+
 <video width="320" height="240" controls>
   <source src="Showcase.mp4" type="video/mp4">
 </video>
